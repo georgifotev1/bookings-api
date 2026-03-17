@@ -2,23 +2,20 @@ package domain
 
 import "time"
 
-// User represents the core user entity.
-// Add or rename fields to match your domain.
 type User struct {
-	ID        int64     `json:"id"`
+	ID        string    `json:"id"`
 	Email     string    `json:"email"`
 	Password  string    `json:"-"`
+	Name      string    `json:"name"`
+	Phone     string    `json:"phone"`
+	TenantID  string    `json:"tenant_id"`
+	Avatar    string    `json:"avatar"`
+	Role      string    `json:"role"`
+	Verified  bool      `json:"verified"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// CreateUserRequest is the payload for creating a user.
-type CreateUserRequest struct {
-	Email    string `json:"email"    validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8"`
-}
+type CreateUserRequest struct{}
 
-// UpdateUserRequest is the payload for updating a user.
-type UpdateUserRequest struct {
-	Email string `json:"email" validate:"omitempty,email"`
-}
+type UpdateUserRequest struct{}
