@@ -14,6 +14,7 @@ type Config struct {
 	CORS        CORSConfig
 	Redis       RedisConfig
 	RateLimiter RateLimiterConfig
+	Resend      ResendConfig
 	Env         string
 	ApiUrl      string
 }
@@ -47,6 +48,11 @@ type RateLimiterConfig struct {
 	TimeFrame            time.Duration
 }
 
+type ResendConfig struct {
+	APIKey    string
+	FromEmail string
+}
+
 func Load() (*Config, error) {
 	if err := godotenv.Load(); err != nil {
 		return nil, err
@@ -75,6 +81,10 @@ func Load() (*Config, error) {
 			Enabled:              getEnvBool("RATE_LIMITER_ENABLED", true),
 			RequestsPerTimeFrame: getEnvInt("RATE_LIMITER_REQUESTS", 50),
 			TimeFrame:            getEnvDuration("RATE_LIMITER_WINDOW", 1*time.Minute),
+		},
+		Resend: ResendConfig{
+			APIKey:    getEnv("RESEND_API_KEY", ""),
+			FromEmail: getEnv("RESEND_FROM_EMAIL", ""),
 		},
 		Env:    getEnv("ENV", "development"),
 		ApiUrl: getEnv("API_URL", "localhost:8080"),

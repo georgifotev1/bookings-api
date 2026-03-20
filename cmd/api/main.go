@@ -8,6 +8,7 @@ import (
 
 	"github.com/georgifotev1/nuvelaone-api/config"
 	"github.com/georgifotev1/nuvelaone-api/pkg/database"
+	"github.com/georgifotev1/nuvelaone-api/pkg/mailer"
 	"github.com/georgifotev1/nuvelaone-api/pkg/ratelimiter"
 	"github.com/georgifotev1/nuvelaone-api/pkg/redis"
 )
@@ -46,11 +47,18 @@ func main() {
 		logger.Info("rate limiter enabled")
 	}
 
+	var mail *mailer.ResendMailer
+	if cfg.Resend.APIKey != "" && cfg.Resend.FromEmail != "" {
+		mail = mailer.NewResendMailer(cfg.Resend.APIKey, cfg.Resend.FromEmail)
+		logger.Info("email mailer initialized")
+	}
+
 	app := &application{
 		config:      cfg,
 		db:          db,
 		redis:       redisClient,
 		rateLimiter: rateLimiter,
+		mailer:      mail,
 		logger:      logger,
 	}
 

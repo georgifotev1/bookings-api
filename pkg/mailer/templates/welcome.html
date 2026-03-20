@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to NuvelaOne</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background: #f9fafb;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Welcome to NuvelaOne!</h1>
+    </div>
+    <div class="content">
+        <p>Hi <strong>{{.Name}}</strong>,</p>
+        <p>Thank you for joining NuvelaOne. We're excited to have you on board!</p>
+        <p>With your new account, you can:</p>
+        <ul>
+            <li>Access all our features</li>
+            <li>Manage your settings</li>
+            <li>Connect with your team</li>
+        </ul>
+        <p>If you have any questions, feel free to reply to this email.</p>
+        <p>Best regards,<br>The NuvelaOne Team</p>
+    </div>
+</body>
+</html>

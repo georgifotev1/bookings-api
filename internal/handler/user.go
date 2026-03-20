@@ -6,6 +6,7 @@ import (
 	"github.com/georgifotev1/nuvelaone-api/internal/domain"
 	"github.com/georgifotev1/nuvelaone-api/internal/service"
 	"github.com/georgifotev1/nuvelaone-api/pkg/jsonutil"
+	"github.com/georgifotev1/nuvelaone-api/pkg/validator"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -51,8 +52,8 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Success  200 {object} domain.User
 // @Router   /users/{id} [get]
 func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
-	if err != nil {
+	id := chi.URLParam(r, "id")
+	if id == "" {
 		jsonutil.WriteError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
@@ -78,6 +79,10 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		jsonutil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	if err := validator.Validate(req); err != nil {
+		jsonutil.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	user, err := h.svc.Create(r.Context(), req)
 	if err != nil {
 		if err == service.ErrConflict {
@@ -100,8 +105,8 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Success  200 {object} domain.User
 // @Router   /users/{id} [put]
 func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
-	if err != nil {
+	id := chi.URLParam(r, "id")
+	if id == "" {
 		jsonutil.WriteError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
@@ -129,8 +134,8 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Success  204
 // @Router   /users/{id} [delete]
 func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
-	if err != nil {
+	id := chi.URLParam(r, "id")
+	if id == "" {
 		jsonutil.WriteError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
@@ -139,8 +144,4 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func parseID(r *http.Request) (string, error) {
-	return chi.URLParam(r, "id"), nil
 }

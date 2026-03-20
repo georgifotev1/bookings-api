@@ -17,6 +17,7 @@ import (
 	"github.com/georgifotev1/nuvelaone-api/internal/repository"
 	"github.com/georgifotev1/nuvelaone-api/internal/service"
 	"github.com/georgifotev1/nuvelaone-api/pkg/jsonutil"
+	"github.com/georgifotev1/nuvelaone-api/pkg/mailer"
 	"github.com/georgifotev1/nuvelaone-api/pkg/ratelimiter"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -32,6 +33,7 @@ type application struct {
 	db          *pgxpool.Pool
 	redis       *redis.Client
 	rateLimiter ratelimiter.Limiter
+	mailer      *mailer.ResendMailer
 	logger      *zap.SugaredLogger
 }
 
