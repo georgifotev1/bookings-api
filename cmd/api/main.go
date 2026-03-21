@@ -8,6 +8,7 @@ import (
 
 	"github.com/georgifotev1/nuvelaone-api/config"
 	"github.com/georgifotev1/nuvelaone-api/pkg/database"
+	"github.com/georgifotev1/nuvelaone-api/pkg/logger"
 	"github.com/georgifotev1/nuvelaone-api/pkg/mailer"
 	"github.com/georgifotev1/nuvelaone-api/pkg/ratelimiter"
 	"github.com/georgifotev1/nuvelaone-api/pkg/redis"
@@ -19,24 +20,24 @@ import (
 // @host            localhost:8080
 // @BasePath        /api/v1
 func main() {
-	logger := zap.Must(zap.NewProduction()).Sugar()
-	defer logger.Sync()
-
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Fatal("failed to load config", zap.Error(err))
+		panic("failed to load config: " + err.Error())
 	}
+
+	log := logger.NewZapLogger(cfg.Env == "development")
+	defer log.Sync()
 
 	db, err := database.Connect(cfg.DB.URL)
 	if err != nil {
-		logger.Fatal("failed to connect to database", zap.Error(err))
+		log.Fatal("failed to connect to database", zap.Error(err))
 	}
 	defer db.Close()
-	logger.Info("database connection established")
+	log.Info("database connection established")
 
 	redisClient := redis.NewRedisClient(cfg.Redis.Addr, cfg.Redis.PW, cfg.Redis.DB)
 	defer redisClient.Close()
-	logger.Info("redis connection established")
+	log.Info("redis connection established")
 
 	var rateLimiter ratelimiter.Limiter
 	if cfg.RateLimiter.Enabled {
@@ -44,13 +45,13 @@ func main() {
 			cfg.RateLimiter.RequestsPerTimeFrame,
 			cfg.RateLimiter.TimeFrame,
 		)
-		logger.Info("rate limiter enabled")
+		log.Info("rate limiter enabled")
 	}
 
-	var mail *mailer.ResendMailer
+	var mail mailer.Mailer
 	if cfg.Resend.APIKey != "" && cfg.Resend.FromEmail != "" {
-		mail = mailer.NewResendMailer(cfg.Resend.APIKey, cfg.Resend.FromEmail)
-		logger.Info("email mailer initialized")
+		mail = mailer.NewResendClient(cfg.Resend.APIKey, cfg.Resend.FromEmail)
+		log.Info("email mailer initialized")
 	}
 
 	app := &application{
@@ -59,10 +60,10 @@ func main() {
 		redis:       redisClient,
 		rateLimiter: rateLimiter,
 		mailer:      mail,
-		logger:      logger,
+		logger:      log,
 	}
 
 	if err := app.run(); err != nil {
-		logger.Fatal("server error", zap.Error(err))
+		log.Fatal("server error", zap.Error(err))
 	}
 }
