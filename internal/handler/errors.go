@@ -2,15 +2,14 @@ package handler
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/georgifotev1/nuvelaone-api/internal/service"
 	"github.com/georgifotev1/nuvelaone-api/pkg/jsonutil"
+	"go.uber.org/zap"
 )
 
-func handleError(w http.ResponseWriter, err error) {
-	fmt.Println("error: ", err)
+func handleError(w http.ResponseWriter, err error, logger *zap.SugaredLogger) {
 	switch {
 	case errors.Is(err, service.ErrNotFound):
 		jsonutil.WriteError(w, http.StatusNotFound, err.Error())
@@ -23,6 +22,7 @@ func handleError(w http.ResponseWriter, err error) {
 	case errors.Is(err, service.ErrForbidden):
 		jsonutil.WriteError(w, http.StatusForbidden, err.Error())
 	default:
+		logger.Errorw("internal server error", "error", err)
 		jsonutil.WriteError(w, http.StatusInternalServerError, "internal server error")
 	}
 }

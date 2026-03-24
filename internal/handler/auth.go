@@ -9,15 +9,20 @@ import (
 	"github.com/georgifotev1/nuvelaone-api/pkg/jsonutil"
 	"github.com/georgifotev1/nuvelaone-api/pkg/validator"
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
 type AuthHandler struct {
 	svc             service.AuthService
 	refreshTokenTTL time.Duration
+	logger          *zap.SugaredLogger
 }
 
-func NewAuthHandler(svc service.AuthService, refreshTokenTTL time.Duration) *AuthHandler {
-	return &AuthHandler{svc: svc, refreshTokenTTL: refreshTokenTTL}
+func NewAuthHandler(svc service.AuthService, refreshTokenTTL time.Duration, logger *zap.SugaredLogger) *AuthHandler {
+	return &AuthHandler{
+		svc: svc, refreshTokenTTL: refreshTokenTTL,
+		logger: logger,
+	}
 }
 
 func (h *AuthHandler) Routes(r chi.Router) {
@@ -51,7 +56,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := h.svc.Register(r.Context(), req)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, err, h.logger)
 		return
 	}
 	jsonutil.Write(w, http.StatusCreated, jsonutil.NewResponse(user))
@@ -81,7 +86,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	pair, err := h.svc.Login(r.Context(), req)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, err, h.logger)
 		return
 	}
 
@@ -111,7 +116,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	pair, err := h.svc.Refresh(r.Context(), cookie.Value)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, err, h.logger)
 		return
 	}
 
@@ -142,7 +147,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.Logout(r.Context(), cookie.Value); err != nil {
-		handleError(w, err)
+		handleError(w, err, h.logger)
 		return
 	}
 

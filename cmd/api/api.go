@@ -79,8 +79,8 @@ func (app *application) mount() http.Handler {
 		RefreshTokenTTL: app.config.Auth.RefreshTokenTTL,
 	})
 
-	userHandler := handler.NewUserHandler(userSvc)
-	authHandler := handler.NewAuthHandler(authSvc, app.config.Auth.RefreshTokenTTL)
+	userHandler := handler.NewUserHandler(userSvc, app.logger)
+	authHandler := handler.NewAuthHandler(authSvc, app.config.Auth.RefreshTokenTTL, app.logger)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {

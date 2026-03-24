@@ -8,14 +8,16 @@ import (
 	"github.com/georgifotev1/nuvelaone-api/pkg/auth"
 	"github.com/georgifotev1/nuvelaone-api/pkg/jsonutil"
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
 type UserHandler struct {
-	svc service.UserService
+	svc    service.UserService
+	logger *zap.SugaredLogger
 }
 
-func NewUserHandler(svc service.UserService) *UserHandler {
-	return &UserHandler{svc: svc}
+func NewUserHandler(svc service.UserService, logger *zap.SugaredLogger) *UserHandler {
+	return &UserHandler{svc: svc, logger: logger}
 }
 
 func (h *UserHandler) Routes(r chi.Router) {
@@ -46,7 +48,7 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.svc.GetByID(ctx, claims.UserID)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, err, h.logger)
 		return
 	}
 
@@ -67,7 +69,7 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 	users, err := h.svc.List(r.Context())
 	if err != nil {
-		handleError(w, err)
+		handleError(w, err, h.logger)
 		return
 	}
 	jsonutil.Write(w, http.StatusOK, users)
@@ -95,7 +97,7 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := h.svc.GetByID(r.Context(), id)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, err, h.logger)
 		return
 	}
 	jsonutil.Write(w, http.StatusOK, jsonutil.NewResponse(user))
@@ -130,7 +132,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := h.svc.Update(r.Context(), id, req)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, err, h.logger)
 		return
 	}
 	jsonutil.Write(w, http.StatusOK, jsonutil.NewResponse(user))
@@ -156,7 +158,7 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.Delete(r.Context(), id); err != nil {
-		handleError(w, err)
+		handleError(w, err, h.logger)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
