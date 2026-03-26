@@ -12,10 +12,18 @@ type Tenant struct {
 	Slug      string    `json:"slug"`
 	Phone     string    `json:"phone"`
 	Email     string    `json:"email"`
-	AddressID string    `json:"address_id"`
+	Tier      Tier      `json:"tier"`
+	AddressID *string   `json:"address_id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+type Tier string
+
+const (
+	TierBase Tier = "base"
+	TierPro  Tier = "pro"
+)
 
 type WorkingHours struct {
 	ID        string `json:"id"`

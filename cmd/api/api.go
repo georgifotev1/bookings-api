@@ -71,6 +71,7 @@ func (app *application) mount() http.Handler {
 	tenantRepo := repository.NewTenantRepository(app.db)
 	userRepo := repository.NewUserRepository(app.db, c.Users)
 	tokenRepo := repository.NewTokenRepository(app.db)
+	invitationRepo := repository.NewInvitationRepository(app.db)
 
 	userSvc := service.NewUserService(userRepo, tenantRepo, txManager, app.taskClient, app.logger)
 	authSvc := service.NewAuthService(userRepo, tenantRepo, tokenRepo, txManager, app.taskClient, app.logger, service.AuthConfig{
@@ -78,9 +79,21 @@ func (app *application) mount() http.Handler {
 		AccessTokenTTL:  app.config.Auth.AccessTokenTTL,
 		RefreshTokenTTL: app.config.Auth.RefreshTokenTTL,
 	})
+	invitationSvc := service.NewInvitationService(
+		invitationRepo,
+		userRepo,
+		tenantRepo,
+		txManager,
+		app.taskClient,
+		app.logger,
+		service.InvitationConfig{
+			InvitationExpiry: 48 * time.Hour,
+			AppBaseURL:       app.config.AppBaseURL,
+		})
 
 	userHandler := handler.NewUserHandler(userSvc, app.logger)
 	authHandler := handler.NewAuthHandler(authSvc, app.config.Auth.RefreshTokenTTL, app.logger)
+	invitationHandler := handler.NewInvitationHandler(invitationSvc, app.logger)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -91,18 +104,31 @@ func (app *application) mount() http.Handler {
 		))
 
 		r.Route("/auth", authHandler.Routes)
-		fmt.Println("routes mounted")
 
-		r.Group(func(r chi.Router) {
+		r.Route("/me", func(r chi.Router) {
 			r.Use(middleware.JWTAuth(app.config.Auth.JWTSecret))
+			r.Get("/", userHandler.GetMe)
+		})
 
-			r.Route("/me", userHandler.MeRoutes)
+		r.Route("/users", func(r chi.Router) {
+			r.Use(middleware.JWTAuth(app.config.Auth.JWTSecret))
+			r.Use(middleware.RequireRole(domain.RoleOwner, domain.RoleAdmin))
+			r.Get("/", userHandler.List)
+			r.Get("/{id}", userHandler.GetByID)
+			r.Put("/{id}", userHandler.Update)
+			r.Delete("/{id}", userHandler.Delete)
+		})
 
+		r.Route("/invitations", func(r chi.Router) {
+			r.Post("/accept", invitationHandler.Accept)
 			r.Group(func(r chi.Router) {
+				r.Use(middleware.JWTAuth(app.config.Auth.JWTSecret))
 				r.Use(middleware.RequireRole(domain.RoleOwner, domain.RoleAdmin))
-				r.Route("/users", userHandler.Routes)
+				r.Post("/", invitationHandler.Create)
+				r.Get("/", invitationHandler.List)
+				r.Delete("/{id}", invitationHandler.Revoke)
+				r.Post("/{id}/resend", invitationHandler.Resend)
 			})
-
 		})
 	})
 
@@ -110,7 +136,6 @@ func (app *application) mount() http.Handler {
 }
 
 func (app *application) run() error {
-	fmt.Println("CALLED RUN!")
 	go func() {
 		if err := app.taskServer.Run(tasks.Register(tasks.HandlerDeps{
 			Mailer:    app.mailer,

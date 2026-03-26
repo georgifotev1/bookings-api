@@ -81,6 +81,7 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 		Phone:     req.Phone,
 		TenantID:  tenant.ID,
 		Role:      domain.RoleOwner,
+		Verified:  true,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}

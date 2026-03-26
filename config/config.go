@@ -17,6 +17,7 @@ type Config struct {
 	Resend      ResendConfig
 	Env         string
 	ApiUrl      string
+	AppBaseURL  string
 }
 
 type AddressConfig struct {
@@ -92,8 +93,9 @@ func Load() (*Config, error) {
 			FromEmail:        getEnv("RESEND_FROM_EMAIL", "onboarding@resend.dev"),
 			DevEmailOverride: getEnv("RESEND_DEV_EMAIL_OVERRIDE", ""),
 		},
-		Env:    getEnv("ENV", "development"),
-		ApiUrl: getEnv("API_URL", "localhost:8080"),
+		Env:        getEnv("ENV", "development"),
+		ApiUrl:     getEnv("API_URL", "localhost:8080"),
+		AppBaseURL: getEnv("APP_BASE_URL", "http://localhost:5173"),
 	}, nil
 }
 

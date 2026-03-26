@@ -5,7 +5,9 @@ import "time"
 type UserInvitation struct {
 	ID        string    `json:"id"`
 	Email     string    `json:"email"`
-	Token     string    `json:"-"`
+	Name      string    `json:"name"`
+	Phone     string    `json:"phone"`
+	Token     string    `json:"token"`
 	Role      string    `json:"role"`
 	InvitedBy string    `json:"invited_by"`
 	ExpiresAt time.Time `json:"expires_at"`

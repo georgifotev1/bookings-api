@@ -34,7 +34,7 @@ func (r *tenantRepository) dbFromContext(ctx context.Context) txmanager.DBTX {
 
 func (r *tenantRepository) GetByID(ctx context.Context, id string) (*domain.Tenant, error) {
 	query := `
-		SELECT id, name, slug, phone, email, address_id, created_at, updated_at
+		SELECT id, name, slug, phone, email, tier, address_id, created_at, updated_at
 		FROM tenants WHERE id = $1`
 
 	var tenant domain.Tenant
@@ -45,6 +45,7 @@ func (r *tenantRepository) GetByID(ctx context.Context, id string) (*domain.Tena
 		&tenant.Slug,
 		&tenant.Phone,
 		&tenant.Email,
+		&tenant.Tier,
 		&tenant.AddressID,
 		&tenant.CreatedAt,
 		&tenant.UpdatedAt,
@@ -58,8 +59,8 @@ func (r *tenantRepository) GetByID(ctx context.Context, id string) (*domain.Tena
 
 func (r *tenantRepository) Create(ctx context.Context, tenant *domain.Tenant) error {
 	query := `
-		INSERT INTO tenants (id, name, slug, phone, email, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`
+		INSERT INTO tenants (id, name, slug, phone, email, tier, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	_, err := r.dbFromContext(ctx).Exec(ctx, query,
 		tenant.ID,
@@ -67,6 +68,7 @@ func (r *tenantRepository) Create(ctx context.Context, tenant *domain.Tenant) er
 		tenant.Slug,
 		tenant.Phone,
 		tenant.Email,
+		tenant.Tier,
 		tenant.CreatedAt,
 		tenant.UpdatedAt,
 	)
@@ -80,7 +82,7 @@ func (r *tenantRepository) Create(ctx context.Context, tenant *domain.Tenant) er
 func (r *tenantRepository) Update(ctx context.Context, tenant *domain.Tenant) error {
 	query := `
 		UPDATE tenants 
-		SET name = $2, slug = $3, phone = $4, email = $5, address_id = $6, updated_at = $7
+		SET name = $2, slug = $3, phone = $4, email = $5, tier = $6, address_id = $7, updated_at = $8
 		WHERE id = $1`
 
 	result, err := r.dbFromContext(ctx).Exec(ctx, query,
@@ -89,6 +91,7 @@ func (r *tenantRepository) Update(ctx context.Context, tenant *domain.Tenant) er
 		tenant.Slug,
 		tenant.Phone,
 		tenant.Email,
+		tenant.Tier,
 		tenant.AddressID,
 		tenant.UpdatedAt,
 	)

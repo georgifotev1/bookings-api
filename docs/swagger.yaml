@@ -2,6 +2,38 @@ basePath: /api/v1
 consumes:
 - application/json
 definitions:
+  github_com_georgifotev1_nuvelaone-api_internal_domain.AcceptInvitationRequest:
+    properties:
+      password:
+        minLength: 8
+        type: string
+      password_confirm:
+        minLength: 8
+        type: string
+      token:
+        type: string
+    required:
+    - password
+    - password_confirm
+    - token
+    type: object
+  github_com_georgifotev1_nuvelaone-api_internal_domain.CreateInvitationRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      role:
+        enum:
+        - admin
+        - member
+        type: string
+    required:
+    - email
+    - name
+    type: object
   github_com_georgifotev1_nuvelaone-api_internal_domain.LoginRequest:
     properties:
       email:
@@ -69,6 +101,29 @@ definitions:
         type: string
       verified:
         type: boolean
+    type: object
+  github_com_georgifotev1_nuvelaone-api_internal_domain.UserInvitation:
+    properties:
+      accepted:
+        type: boolean
+      created_at:
+        type: string
+      email:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      invited_by:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      role:
+        type: string
+      tenant_id:
+        type: string
     type: object
   github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse:
     properties:
@@ -191,6 +246,142 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /invitations:
+    get:
+      description: List all pending invitations for the current tenant
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.UserInvitation'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List invitations
+      tags:
+      - invitations
+    post:
+      consumes:
+      - application/json
+      description: Create a new invitation to join the tenant (Pro tier only)
+      parameters:
+      - description: Invitation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.CreateInvitationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.UserInvitation'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create invitation
+      tags:
+      - invitations
+  /invitations/{id}:
+    delete:
+      description: Revoke (delete) a pending invitation
+      parameters:
+      - description: Invitation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Revoke invitation
+      tags:
+      - invitations
+  /invitations/{id}/resend:
+    post:
+      description: Resend an existing invitation with a new token (Pro tier only)
+      parameters:
+      - description: Invitation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Resend invitation
+      tags:
+      - invitations
+  /invitations/accept:
+    post:
+      consumes:
+      - application/json
+      description: Accept an invitation and create an account
+      parameters:
+      - description: Accept invitation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.AcceptInvitationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "410":
+          description: Gone
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+      summary: Accept invitation
+      tags:
+      - invitations
   /me:
     get:
       description: Get the authenticated user's profile

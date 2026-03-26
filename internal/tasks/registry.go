@@ -19,6 +19,9 @@ func Register(deps HandlerDeps) *asynq.ServeMux {
 	mux.Handle(TypeWelcomeEmail,
 		NewWelcomeEmailHandler(deps.Mailer, deps.Logger))
 
+	mux.Handle(TypeInvitationEmail,
+		NewInvitationEmailHandler(deps.Mailer, deps.Logger))
+
 	mux.Handle(TypeCleanupExpiredTokens,
 		NewCleanupExpiredTokensHandler(deps.TokenRepo, deps.Logger))
 

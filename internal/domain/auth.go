@@ -27,3 +27,16 @@ type RefreshToken struct {
 	CreatedAt time.Time
 	RevokedAt *time.Time
 }
+
+type CreateInvitationRequest struct {
+	Email string `json:"email" validate:"required,email"`
+	Name  string `json:"name" validate:"required"`
+	Phone string `json:"phone"`
+	Role  string `json:"role" validate:"omitempty,oneof=admin member"`
+}
+
+type AcceptInvitationRequest struct {
+	Token           string `json:"token" validate:"required"`
+	Password        string `json:"password" validate:"required,min=8"`
+	PasswordConfirm string `json:"password_confirm" validate:"required,min=8"`
+}

@@ -13,6 +13,7 @@ const (
 	TaskTimeout  = 30 * time.Second
 
 	TypeWelcomeEmail         = "email:welcome"
+	TypeInvitationEmail      = "email:invitation"
 	TypeCleanupExpiredTokens = "token:cleanup"
 )
 
@@ -33,8 +34,27 @@ func NewWelcomeEmailTask(p WelcomeEmailPayload) (*asynq.Task, error) {
 	), nil
 }
 
+type InvitationEmailPayload struct {
+	InvitedByName string `json:"invited_by_name"`
+	Email         string `json:"email"`
+	Name          string `json:"name"`
+	Token         string `json:"token"`
+	TenantName    string `json:"tenant_name"`
+	AcceptURL     string `json:"accept_url"`
+}
+
+func NewInvitationEmailTask(p InvitationEmailPayload) (*asynq.Task, error) {
+	payload, err := json.Marshal(p)
+	if err != nil {
+		return nil, fmt.Errorf("tasks.NewInvitationEmailTask: %w", err)
+	}
+	return asynq.NewTask(TypeInvitationEmail, payload,
+		asynq.MaxRetry(TaskMaxRetry),
+		asynq.Timeout(TaskTimeout),
+	), nil
+}
+
 func NewCleanupExpiredTokensTask() *asynq.Task {
-	// no payload, no error possible — simplify the signature
 	return asynq.NewTask(TypeCleanupExpiredTokens, nil,
 		asynq.MaxRetry(1),
 		asynq.Timeout(60*time.Second),
