@@ -5,11 +5,13 @@ import (
 )
 
 type Cache struct {
-	Users *UserStore
+	Users   *UserStore
+	Tenants *TenantStore
 }
 
 func New(rdb *redis.Client) *Cache {
 	return &Cache{
-		Users: NewUserStore(rdb),
+		Users:   NewUserStore(rdb),
+		Tenants: NewTenantStore(rdb),
 	}
 }

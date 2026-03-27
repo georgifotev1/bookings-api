@@ -68,12 +68,12 @@ func (app *application) mount() http.Handler {
 	c := cache.New(app.redis)
 	txManager := txmanager.NewTxManager(app.db)
 
-	tenantRepo := repository.NewTenantRepository(app.db)
+	tenantRepo := repository.NewTenantRepository(app.db, c.Tenants)
 	userRepo := repository.NewUserRepository(app.db, c.Users)
 	tokenRepo := repository.NewTokenRepository(app.db)
 	invitationRepo := repository.NewInvitationRepository(app.db)
 
-	userSvc := service.NewUserService(userRepo, tenantRepo, txManager, app.taskClient, app.logger)
+	userSvc := service.NewUserService(userRepo)
 	authSvc := service.NewAuthService(userRepo, tenantRepo, tokenRepo, txManager, app.taskClient, app.logger, service.AuthConfig{
 		AccessSecret:    app.config.Auth.JWTSecret,
 		AccessTokenTTL:  app.config.Auth.AccessTokenTTL,
@@ -90,10 +90,12 @@ func (app *application) mount() http.Handler {
 			InvitationExpiry: 48 * time.Hour,
 			AppBaseURL:       app.config.AppBaseURL,
 		})
+	tenantSvc := service.NewTenantService(tenantRepo, app.logger)
 
 	userHandler := handler.NewUserHandler(userSvc, app.logger)
 	authHandler := handler.NewAuthHandler(authSvc, app.config.Auth.RefreshTokenTTL, app.logger)
 	invitationHandler := handler.NewInvitationHandler(invitationSvc, app.logger)
+	tenantHandler := handler.NewTenantHandler(tenantSvc, app.logger)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -128,6 +130,16 @@ func (app *application) mount() http.Handler {
 				r.Get("/", invitationHandler.List)
 				r.Delete("/{id}", invitationHandler.Revoke)
 				r.Post("/{id}/resend", invitationHandler.Resend)
+			})
+		})
+
+		r.Route("/tenants/me", func(r chi.Router) {
+			r.Use(middleware.JWTAuth(app.config.Auth.JWTSecret))
+			r.Get("/", tenantHandler.GetMyTenant)
+
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequireRole(domain.RoleOwner, domain.RoleAdmin))
+				r.Put("/", tenantHandler.Update)
 			})
 		})
 	})

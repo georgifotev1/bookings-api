@@ -724,7 +724,8 @@
             "required": [
                 "email",
                 "name",
-                "password"
+                "password",
+                "timezone"
             ],
             "properties": {
                 "email": {
@@ -738,6 +739,9 @@
                     "minLength": 8
                 },
                 "phone": {
+                    "type": "string"
+                },
+                "timezone": {
                     "type": "string"
                 }
             }
@@ -835,6 +839,9 @@
                     "type": "string"
                 },
                 "tenant_id": {
+                    "type": "string"
+                },
+                "token": {
                     "type": "string"
                 }
             }

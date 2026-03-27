@@ -11,6 +11,7 @@ import (
 	"github.com/georgifotev1/nuvelaone-api/internal/tasks"
 	"github.com/georgifotev1/nuvelaone-api/internal/txmanager"
 	"github.com/georgifotev1/nuvelaone-api/pkg/auth"
+	"github.com/georgifotev1/nuvelaone-api/pkg/timeutil"
 	"github.com/segmentio/ksuid"
 	"go.uber.org/zap"
 )
@@ -64,12 +65,19 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 		return nil, fmt.Errorf("authService.Register hash: %w", err)
 	}
 
+	loc, err := time.LoadLocation(req.Timezone)
+	if err != nil {
+		return nil, fmt.Errorf("invalid timezone: %w", ErrBadRequest)
+	}
+
 	now := time.Now()
 	tenant := &domain.Tenant{
 		ID:        ksuid.New().String(),
 		Name:      req.Name,
 		Slug:      domain.NewSlug(req.Name),
 		Phone:     req.Phone,
+		Timezone:  req.Timezone,
+		Tier:      domain.TierBase,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -90,6 +98,26 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 		if err := s.tenantRepo.Create(ctx, tenant); err != nil {
 			return err
 		}
+
+		hours := make([]domain.WorkingHours, 7)
+		for day := range 7 {
+			openTime := time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, loc)
+			closeTime := time.Date(now.Year(), now.Month(), now.Day(), 17, 0, 0, 0, loc)
+
+			hours[day] = domain.WorkingHours{
+				ID:        ksuid.New().String(),
+				TenantID:  tenant.ID,
+				DayOfWeek: day,
+				OpensAt:   openTime.UTC().Format(timeutil.TimeOnly),
+				ClosesAt:  closeTime.UTC().Format(timeutil.TimeOnly),
+				IsClosed:  day < 5,
+			}
+		}
+
+		if err := s.tenantRepo.UpsertWorkingHours(ctx, tenant.ID, hours); err != nil {
+			return err
+		}
+
 		return s.userRepo.Create(ctx, user)
 	}); err != nil {
 		if errors.Is(err, repository.ErrDuplicate) {

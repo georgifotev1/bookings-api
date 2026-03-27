@@ -21,6 +21,8 @@ func handleError(w http.ResponseWriter, err error, logger *zap.SugaredLogger) {
 		jsonutil.WriteError(w, http.StatusUnauthorized, err.Error())
 	case errors.Is(err, service.ErrForbidden):
 		jsonutil.WriteError(w, http.StatusForbidden, err.Error())
+	case errors.Is(err, service.ErrBadRequest):
+		jsonutil.WriteError(w, http.StatusBadRequest, err.Error())
 	case errors.Is(err, service.ErrNotProTier):
 		jsonutil.WriteError(w, http.StatusForbidden, "only pro tier owners can invite users")
 	case errors.Is(err, service.ErrInvitationExists):

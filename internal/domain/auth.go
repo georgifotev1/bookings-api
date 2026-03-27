@@ -12,6 +12,7 @@ type RegisterRequest struct {
 	Password string `json:"password" validate:"required,min=8"`
 	Name     string `json:"name" validate:"required"`
 	Phone    string `json:"phone"`
+	Timezone string `json:"timezone" validate:"required,timezone"`
 }
 
 type LoginRequest struct {

@@ -55,10 +55,13 @@ definitions:
         type: string
       phone:
         type: string
+      timezone:
+        type: string
     required:
     - email
     - name
     - password
+    - timezone
     type: object
   github_com_georgifotev1_nuvelaone-api_internal_domain.Role:
     enum:
@@ -123,6 +126,8 @@ definitions:
       role:
         type: string
       tenant_id:
+        type: string
+      token:
         type: string
     type: object
   github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse:

@@ -39,6 +39,7 @@ func TestAuthService_Register(t *testing.T) {
 					_ = fn(context.Background())
 				})
 				tenantRepo.On("Create", mock.Anything, mock.Anything).Return(nil)
+				tenantRepo.On("UpsertWorkingHours", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 				userRepo.On("Create", mock.Anything, mock.Anything).Return(nil)
 				taskClient.On("Enqueue", mock.Anything, mock.Anything).Return(nil, nil)
 			},
@@ -57,6 +58,7 @@ func TestAuthService_Register(t *testing.T) {
 					_ = fn(context.Background())
 				})
 				tenantRepo.On("Create", mock.Anything, mock.Anything).Return(nil)
+				tenantRepo.On("UpsertWorkingHours", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 				userRepo.On("Create", mock.Anything, mock.Anything).Return(nil)
 			},
 			expectedErr: ErrConflict,
