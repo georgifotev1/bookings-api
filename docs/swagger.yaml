@@ -73,6 +73,55 @@ definitions:
     - RoleAdmin
     - RoleOwner
     - RoleMember
+  github_com_georgifotev1_nuvelaone-api_internal_domain.Tenant:
+    properties:
+      address_id:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      slug:
+        type: string
+      tier:
+        $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Tier'
+      timezone:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_georgifotev1_nuvelaone-api_internal_domain.Tier:
+    enum:
+    - base
+    - pro
+    type: string
+    x-enum-varnames:
+    - TierBase
+    - TierPro
+  github_com_georgifotev1_nuvelaone-api_internal_domain.UpdateTenantRequest:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 50
+        minLength: 1
+        type: string
+      phone:
+        maxLength: 20
+        type: string
+      timezone:
+        type: string
+      working_hours:
+        items:
+          $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.WorkingHoursRequest'
+        type: array
+    type: object
   github_com_georgifotev1_nuvelaone-api_internal_domain.UpdateUserRequest:
     properties:
       email:
@@ -130,10 +179,45 @@ definitions:
       token:
         type: string
     type: object
+  github_com_georgifotev1_nuvelaone-api_internal_domain.WorkingHours:
+    properties:
+      closes_at:
+        type: string
+      day_of_week:
+        type: integer
+      id:
+        type: string
+      is_closed:
+        type: boolean
+      opens_at:
+        type: string
+      tenant_id:
+        type: string
+    type: object
+  github_com_georgifotev1_nuvelaone-api_internal_domain.WorkingHoursRequest:
+    properties:
+      closes_at:
+        type: string
+      day_of_week:
+        type: integer
+      is_closed:
+        type: boolean
+      opens_at:
+        type: string
+    type: object
   github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse:
     properties:
       error:
         type: string
+    type: object
+  internal_handler.TenantResponse:
+    properties:
+      tenant:
+        $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Tenant'
+      working_hours:
+        items:
+          $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.WorkingHours'
+        type: array
     type: object
 host: localhost:8080
 info:
@@ -410,6 +494,69 @@ paths:
       summary: Get current user
       tags:
       - users
+  /tenants:
+    put:
+      consumes:
+      - application/json
+      description: Update tenant details (admin/owner only)
+      parameters:
+      - description: Update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.UpdateTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Tenant'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update tenant
+      tags:
+      - tenants
+  /tenants/me:
+    get:
+      description: Get the authenticated user's tenant details
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.TenantResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current tenant
+      tags:
+      - tenants
   /users:
     get:
       description: Get all users (admin/owner only)

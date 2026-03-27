@@ -133,9 +133,9 @@ func (app *application) mount() http.Handler {
 			})
 		})
 
-		r.Route("/tenants/me", func(r chi.Router) {
+		r.Route("/tenants", func(r chi.Router) {
 			r.Use(middleware.JWTAuth(app.config.Auth.JWTSecret))
-			r.Get("/", tenantHandler.GetMyTenant)
+			r.Get("/me", tenantHandler.GetMyTenant)
 
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RequireRole(domain.RoleOwner, domain.RoleAdmin))

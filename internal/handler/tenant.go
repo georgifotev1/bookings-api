@@ -24,6 +24,17 @@ type TenantResponse struct {
 	WorkingHours []domain.WorkingHours `json:"working_hours"`
 }
 
+// GetMyTenant godoc
+//
+//	@Summary		Get current tenant
+//	@Description	Get the authenticated user's tenant details
+//	@Tags			tenants
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	TenantResponse
+//	@Failure		401	{object}	jsonutil.ErrorResponse
+//	@Failure		404	{object}	jsonutil.ErrorResponse
+//	@Router			/tenants/me [get]
 func (h *TenantHandler) GetMyTenant(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	claims := auth.ClaimsFromContext(ctx)
@@ -40,6 +51,21 @@ func (h *TenantHandler) GetMyTenant(w http.ResponseWriter, r *http.Request) {
 	}))
 }
 
+// Update godoc
+//
+//	@Summary		Update tenant
+//	@Description	Update tenant details (admin/owner only)
+//	@Tags			tenants
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		domain.UpdateTenantRequest	true	"Update request"
+//	@Success		200	{object}	domain.Tenant
+//	@Failure		400	{object}	jsonutil.ErrorResponse
+//	@Failure		401	{object}	jsonutil.ErrorResponse
+//	@Failure		403	{object}	jsonutil.ErrorResponse
+//	@Failure		404	{object}	jsonutil.ErrorResponse
+//	@Router			/tenants [put]
 func (h *TenantHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	claims := auth.ClaimsFromContext(ctx)

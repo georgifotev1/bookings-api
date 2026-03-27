@@ -31,8 +31,26 @@ func Validate(s any) error {
 			return err
 		}
 		for _, e := range verr {
-			return fmt.Errorf("%s: %s", e.Field(), e.Tag())
+			return fmt.Errorf("%s", humanize(e))
 		}
 	}
 	return nil
+}
+
+func humanize(e validator.FieldError) string {
+	field := e.Field()
+	switch e.Tag() {
+	case "required":
+		return fmt.Sprintf("%s is required", field)
+	case "email":
+		return fmt.Sprintf("%s must be a valid email address", field)
+	case "min":
+		return fmt.Sprintf("%s must be at least %s characters", field, e.Param())
+	case "max":
+		return fmt.Sprintf("%s must be at most %s characters", field, e.Param())
+	case "timezone":
+		return fmt.Sprintf("%s must be a valid timezone (e.g. Europe/Sofia)", field)
+	default:
+		return fmt.Sprintf("%s is invalid", field)
+	}
 }

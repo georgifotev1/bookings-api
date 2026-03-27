@@ -440,6 +440,106 @@
                 }
             }
         },
+        "/tenants": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update tenant details (admin/owner only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tenants"
+                ],
+                "summary": "Update tenant",
+                "parameters": [
+                    {
+                        "description": "Update request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.UpdateTenantRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Tenant"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tenants/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the authenticated user's tenant details",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tenants"
+                ],
+                "summary": "Get current tenant",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.TenantResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "security": [
@@ -759,6 +859,78 @@
                 "RoleMember"
             ]
         },
+        "github_com_georgifotev1_nuvelaone-api_internal_domain.Tenant": {
+            "type": "object",
+            "properties": {
+                "address_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "tier": {
+                    "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Tier"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_georgifotev1_nuvelaone-api_internal_domain.Tier": {
+            "type": "string",
+            "enum": [
+                "base",
+                "pro"
+            ],
+            "x-enum-varnames": [
+                "TierBase",
+                "TierPro"
+            ]
+        },
+        "github_com_georgifotev1_nuvelaone-api_internal_domain.UpdateTenantRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 1
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "working_hours": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.WorkingHoursRequest"
+                    }
+                }
+            }
+        },
         "github_com_georgifotev1_nuvelaone-api_internal_domain.UpdateUserRequest": {
             "type": "object",
             "properties": {
@@ -846,11 +1018,65 @@
                 }
             }
         },
+        "github_com_georgifotev1_nuvelaone-api_internal_domain.WorkingHours": {
+            "type": "object",
+            "properties": {
+                "closes_at": {
+                    "type": "string"
+                },
+                "day_of_week": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_closed": {
+                    "type": "boolean"
+                },
+                "opens_at": {
+                    "type": "string"
+                },
+                "tenant_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_georgifotev1_nuvelaone-api_internal_domain.WorkingHoursRequest": {
+            "type": "object",
+            "properties": {
+                "closes_at": {
+                    "type": "string"
+                },
+                "day_of_week": {
+                    "type": "integer"
+                },
+                "is_closed": {
+                    "type": "boolean"
+                },
+                "opens_at": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_handler.TenantResponse": {
+            "type": "object",
+            "properties": {
+                "tenant": {
+                    "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Tenant"
+                },
+                "working_hours": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.WorkingHours"
+                    }
                 }
             }
         }
