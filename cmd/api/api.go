@@ -72,6 +72,7 @@ func (app *application) mount() http.Handler {
 	userRepo := repository.NewUserRepository(app.db, c.Users)
 	tokenRepo := repository.NewTokenRepository(app.db)
 	invitationRepo := repository.NewInvitationRepository(app.db)
+	serviceRepo := repository.NewServiceRepository(app.db, c.Services)
 
 	userSvc := service.NewUserService(userRepo)
 	authSvc := service.NewAuthService(userRepo, tenantRepo, tokenRepo, txManager, app.taskClient, app.logger, service.AuthConfig{
@@ -91,11 +92,13 @@ func (app *application) mount() http.Handler {
 			AppBaseURL:       app.config.AppBaseURL,
 		})
 	tenantSvc := service.NewTenantService(tenantRepo, app.logger)
+	serviceSvc := service.NewServiceService(serviceRepo, txManager)
 
 	userHandler := handler.NewUserHandler(userSvc, app.logger)
 	authHandler := handler.NewAuthHandler(authSvc, app.config.Auth.RefreshTokenTTL, app.logger)
 	invitationHandler := handler.NewInvitationHandler(invitationSvc, app.logger)
 	tenantHandler := handler.NewTenantHandler(tenantSvc, app.logger)
+	serviceHandler := handler.NewServiceHandler(serviceSvc, app.logger)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -140,6 +143,21 @@ func (app *application) mount() http.Handler {
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RequireRole(domain.RoleOwner, domain.RoleAdmin))
 				r.Put("/", tenantHandler.Update)
+			})
+		})
+
+		r.Route("/services", func(r chi.Router) {
+			r.Use(middleware.JWTAuth(app.config.Auth.JWTSecret))
+			r.Get("/", serviceHandler.List)
+
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequireRole(domain.RoleOwner, domain.RoleAdmin))
+				r.Post("/", serviceHandler.Create)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", serviceHandler.GetByID)
+					r.Put("/", serviceHandler.Update)
+					r.Delete("/", serviceHandler.Delete)
+				})
 			})
 		})
 	})

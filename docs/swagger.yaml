@@ -73,6 +73,52 @@ definitions:
     - RoleAdmin
     - RoleOwner
     - RoleMember
+  github_com_georgifotev1_nuvelaone-api_internal_domain.Service:
+    properties:
+      buffer:
+        type: integer
+      cost:
+        type: integer
+      created_at:
+        type: string
+      description:
+        type: string
+      duration:
+        type: integer
+      id:
+        type: string
+      tenant_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      visible:
+        type: boolean
+    type: object
+  github_com_georgifotev1_nuvelaone-api_internal_domain.ServiceRequest:
+    properties:
+      buffer:
+        type: integer
+      cost:
+        type: integer
+      description:
+        type: string
+      duration:
+        type: integer
+      title:
+        type: string
+      user_ids:
+        items:
+          type: string
+        type: array
+      visible:
+        type: boolean
+    required:
+    - cost
+    - duration
+    - title
+    type: object
   github_com_georgifotev1_nuvelaone-api_internal_domain.Tenant:
     properties:
       address_id:
@@ -494,6 +540,165 @@ paths:
       summary: Get current user
       tags:
       - users
+  /services:
+    get:
+      description: Get all services for the tenant
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Service'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List services
+      tags:
+      - services
+    post:
+      consumes:
+      - application/json
+      description: Create a new service (owner/admin only)
+      parameters:
+      - description: Create request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.ServiceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Service'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create service
+      tags:
+      - services
+  /services/{id}:
+    delete:
+      description: Delete a service (owner/admin only)
+      parameters:
+      - description: Service ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete service
+      tags:
+      - services
+    get:
+      description: Get a specific service by ID
+      parameters:
+      - description: Service ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Service'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get service by ID
+      tags:
+      - services
+    put:
+      consumes:
+      - application/json
+      description: Update a service (owner/admin only)
+      parameters:
+      - description: Service ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.ServiceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Service'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update service
+      tags:
+      - services
   /tenants:
     put:
       consumes:
