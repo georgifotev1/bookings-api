@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/georgifotev1/nuvelaone-api/internal/domain"
+	apperr "github.com/georgifotev1/nuvelaone-api/internal/errors"
 	"github.com/georgifotev1/nuvelaone-api/internal/repository"
 	"github.com/georgifotev1/nuvelaone-api/internal/tasks"
 	"github.com/georgifotev1/nuvelaone-api/internal/txmanager"
@@ -67,7 +67,7 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 
 	loc, err := time.LoadLocation(req.Timezone)
 	if err != nil {
-		return nil, fmt.Errorf("invalid timezone: %w", ErrBadRequest)
+		return nil, apperr.Validation("invalid timezone")
 	}
 
 	now := time.Now()
@@ -120,9 +120,6 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 
 		return s.userRepo.Create(ctx, user)
 	}); err != nil {
-		if errors.Is(err, repository.ErrDuplicate) {
-			return nil, ErrConflict
-		}
 		return nil, fmt.Errorf("authService.Register tx: %w", err)
 	}
 
@@ -147,11 +144,11 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 func (s *authService) Login(ctx context.Context, req domain.LoginRequest) (*domain.TokenPair, error) {
 	user, err := s.userRepo.GetByEmail(ctx, req.Email)
 	if err != nil {
-		return nil, ErrInvalidCredentials
+		return nil, apperr.Unauthorized("invalid credentials")
 	}
 
 	if !auth.CheckPassword(req.Password, user.Password) {
-		return nil, ErrInvalidCredentials
+		return nil, apperr.Unauthorized("invalid credentials")
 	}
 
 	return s.issueTokenPair(ctx, user)
@@ -160,10 +157,7 @@ func (s *authService) Login(ctx context.Context, req domain.LoginRequest) (*doma
 func (s *authService) Logout(ctx context.Context, rawRefreshToken string) error {
 	hash := auth.HashToken(rawRefreshToken)
 	if err := s.tokenRepo.Revoke(ctx, hash); err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return ErrInvalidToken
-		}
-		return fmt.Errorf("authService.Logout: %w", err)
+		return fmt.Errorf("authService.Logout: %w", apperr.Unauthorized("invalid token"))
 	}
 	return nil
 }
@@ -173,23 +167,22 @@ func (s *authService) Refresh(ctx context.Context, rawRefreshToken string) (*dom
 
 	stored, err := s.tokenRepo.GetByHash(ctx, hash)
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, apperr.Unauthorized("invalid token")
 	}
 	if stored.RevokedAt != nil {
-		// possible token theft — revoke all tokens for this user
 		s.logger.Warnw("reuse of revoked refresh token", "userID", stored.UserID)
 		if err := s.tokenRepo.RevokeAllForUser(ctx, stored.UserID); err != nil {
 			s.logger.Errorw("failed to revoke all tokens", "error", err, "userID", stored.UserID)
 		}
-		return nil, ErrInvalidToken
+		return nil, apperr.Unauthorized("invalid token")
 	}
 	if stored.ExpiresAt.Before(time.Now()) {
-		return nil, ErrInvalidToken
+		return nil, apperr.Unauthorized("token expired")
 	}
 
 	user, err := s.userRepo.GetByID(ctx, stored.UserID)
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, apperr.Unauthorized("invalid token")
 	}
 
 	var pair *domain.TokenPair

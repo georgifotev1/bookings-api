@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/georgifotev1/nuvelaone-api/internal/domain"
+	apperr "github.com/georgifotev1/nuvelaone-api/internal/errors"
 	"github.com/georgifotev1/nuvelaone-api/internal/txmanager"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -48,7 +49,10 @@ func (r *customerRepository) GetByID(ctx context.Context, tenantID, id string) (
 		&c.UpdatedAt,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("customerRepository.GetByID: %w", MapError(err))
+		if isNotFound(err) {
+			return nil, fmt.Errorf("customerRepository.GetByID: %w", apperr.NotFound("customer not found", err))
+		}
+		return nil, fmt.Errorf("customerRepository.GetByID: %w", apperr.Internal(err))
 	}
 	return &c, nil
 }
@@ -61,7 +65,7 @@ func (r *customerRepository) ListByTenant(ctx context.Context, tenantID string) 
 
 	rows, err := r.dbFromContext(ctx).Query(ctx, query, tenantID)
 	if err != nil {
-		return nil, fmt.Errorf("customerRepository.ListByTenant: %w", MapError(err))
+		return nil, fmt.Errorf("customerRepository.ListByTenant: %w", apperr.Internal(err))
 	}
 	defer rows.Close()
 
@@ -77,11 +81,13 @@ func (r *customerRepository) ListByTenant(ctx context.Context, tenantID string) 
 			&c.CreatedAt,
 			&c.UpdatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("customerRepository.ListByTenant scan: %w", err)
+			return nil, fmt.Errorf("customerRepository.ListByTenant scan: %w", apperr.Internal(err))
 		}
 		customers = append(customers, c)
 	}
-
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("customerRepository.ListByTenant: %w", apperr.Internal(rows.Err()))
+	}
 	return customers, nil
 }
 
@@ -100,7 +106,10 @@ func (r *customerRepository) Create(ctx context.Context, customer *domain.Custom
 		customer.UpdatedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("customerRepository.Create: %w", MapError(err))
+		if isUniqueViolation(err) {
+			return fmt.Errorf("customerRepository.Create: %w", apperr.Conflict("customer with that email already exists"))
+		}
+		return fmt.Errorf("customerRepository.Create: %w", apperr.Internal(err))
 	}
 	return nil
 }
@@ -119,10 +128,10 @@ func (r *customerRepository) Update(ctx context.Context, customer *domain.Custom
 		customer.UpdatedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("customerRepository.Update: %w", MapError(err))
+		return fmt.Errorf("customerRepository.Update: %w", apperr.Internal(err))
 	}
 	if result.RowsAffected() == 0 {
-		return ErrNotFound
+		return apperr.NotFound("customer not found", nil)
 	}
 	return nil
 }
@@ -131,10 +140,10 @@ func (r *customerRepository) Delete(ctx context.Context, tenantID, id string) er
 	query := `DELETE FROM customers WHERE id = $1 AND tenant_id = $2`
 	result, err := r.dbFromContext(ctx).Exec(ctx, query, id, tenantID)
 	if err != nil {
-		return fmt.Errorf("customerRepository.Delete: %w", MapError(err))
+		return fmt.Errorf("customerRepository.Delete: %w", apperr.Internal(err))
 	}
 	if result.RowsAffected() == 0 {
-		return ErrNotFound
+		return apperr.NotFound("customer not found", nil)
 	}
 	return nil
 }

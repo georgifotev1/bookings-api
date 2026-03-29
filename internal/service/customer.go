@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -39,9 +38,6 @@ func (s *customerService) ListByTenant(ctx context.Context, tenantID string) ([]
 func (s *customerService) GetByID(ctx context.Context, tenantID, id string) (*domain.Customer, error) {
 	customer, err := s.repo.GetByID(ctx, tenantID, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return nil, ErrNotFound
-		}
 		return nil, fmt.Errorf("customerService.GetByID: %w", err)
 	}
 	return customer, nil
@@ -69,10 +65,7 @@ func (s *customerService) Create(ctx context.Context, tenantID string, req domai
 func (s *customerService) Update(ctx context.Context, tenantID, customerID string, req domain.CustomerRequest) (*domain.Customer, error) {
 	customer, err := s.repo.GetByID(ctx, tenantID, customerID)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("customerService.Update get: %w", err)
+		return nil, fmt.Errorf("customerService.Update: %w", err)
 	}
 
 	customer.Name = req.Name
@@ -81,10 +74,6 @@ func (s *customerService) Update(ctx context.Context, tenantID, customerID strin
 	customer.UpdatedAt = time.Now()
 
 	if err := s.repo.Update(ctx, customer); err != nil {
-		if errors.Is(err, repository.ErrDuplicate) {
-			return nil, ErrConflict
-		}
-
 		return nil, fmt.Errorf("customerService.Update: %w", err)
 	}
 
@@ -93,9 +82,6 @@ func (s *customerService) Update(ctx context.Context, tenantID, customerID strin
 
 func (s *customerService) Delete(ctx context.Context, tenantID, customerID string) error {
 	if err := s.repo.Delete(ctx, tenantID, customerID); err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return ErrNotFound
-		}
 		return fmt.Errorf("customerService.Delete: %w", err)
 	}
 	return nil

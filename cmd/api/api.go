@@ -96,12 +96,12 @@ func (app *application) mount() http.Handler {
 	serviceSvc := service.NewServiceService(serviceRepo, txManager)
 	customerSvc := service.NewCustomerService(customerRepo)
 
-	userHandler := handler.NewUserHandler(userSvc, app.logger)
-	authHandler := handler.NewAuthHandler(authSvc, app.config.Auth.RefreshTokenTTL, app.logger)
-	invitationHandler := handler.NewInvitationHandler(invitationSvc, app.logger)
-	tenantHandler := handler.NewTenantHandler(tenantSvc, app.logger)
-	serviceHandler := handler.NewServiceHandler(serviceSvc, app.logger)
-	customerHandler := handler.NewCustomerHandler(customerSvc, app.logger)
+	userHandler := handler.NewUserHandler(userSvc)
+	authHandler := handler.NewAuthHandler(authSvc, app.config.Auth.RefreshTokenTTL)
+	invitationHandler := handler.NewInvitationHandler(invitationSvc)
+	tenantHandler := handler.NewTenantHandler(tenantSvc)
+	serviceHandler := handler.NewServiceHandler(serviceSvc)
+	customerHandler := handler.NewCustomerHandler(customerSvc)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {

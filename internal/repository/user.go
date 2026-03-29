@@ -7,6 +7,7 @@ import (
 
 	"github.com/georgifotev1/nuvelaone-api/internal/cache"
 	"github.com/georgifotev1/nuvelaone-api/internal/domain"
+	apperr "github.com/georgifotev1/nuvelaone-api/internal/errors"
 	"github.com/georgifotev1/nuvelaone-api/internal/txmanager"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -68,7 +69,10 @@ func (r *userRepository) GetByID(ctx context.Context, id string) (*domain.User, 
 		&user.UpdatedAt,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("userRepository.GetByID: %w", MapError(err))
+		if isNotFound(err) {
+			return nil, fmt.Errorf("userRepository.GetByID: %w", apperr.NotFound("user not found", err))
+		}
+		return nil, fmt.Errorf("userRepository.GetByID: %w", apperr.Internal(err))
 	}
 
 	if err := r.cache.Set(ctx, id, user); err != nil {
@@ -86,7 +90,10 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.
 	user := &domain.User{}
 	err := row.Scan(&user.ID, &user.Email, &user.Password, &user.Name, &user.Phone, &user.TenantID, &user.Avatar, &user.Role, &user.Verified, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
-		return nil, fmt.Errorf("userRepository.GetByEmail: %w", MapError(err))
+		if isNotFound(err) {
+			return nil, fmt.Errorf("userRepository.GetByEmail: %w", apperr.NotFound("user not found", err))
+		}
+		return nil, fmt.Errorf("userRepository.GetByEmail: %w", apperr.Internal(err))
 	}
 	return user, nil
 }
@@ -99,7 +106,7 @@ func (r *userRepository) List(ctx context.Context, tenantID string) ([]domain.Us
 
 	rows, err := r.dbFromContext(ctx).Query(ctx, query, tenantID)
 	if err != nil {
-		return nil, fmt.Errorf("userRepository.List: %w", MapError(err))
+		return nil, fmt.Errorf("userRepository.List: %w", apperr.Internal(err))
 	}
 	defer rows.Close()
 
@@ -119,11 +126,14 @@ func (r *userRepository) List(ctx context.Context, tenantID string) ([]domain.Us
 			&u.CreatedAt,
 			&u.UpdatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("userRepository.List scan: %w", MapError(err))
+			return nil, fmt.Errorf("userRepository.List scan: %w", apperr.Internal(err))
 		}
 		users = append(users, u)
 	}
-	return users, MapError(rows.Err())
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("userRepository.List: %w", apperr.Internal(rows.Err()))
+	}
+	return users, nil
 }
 
 func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
@@ -134,7 +144,10 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 	row := r.dbFromContext(ctx).QueryRow(ctx, query, user.ID, user.Email, user.Password, user.Name, user.Phone, user.TenantID, user.Avatar, user.Role, user.Verified)
 	err := row.Scan(&user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
-		return fmt.Errorf("userRepository.Create: %w", MapError(err))
+		if isUniqueViolation(err) {
+			return fmt.Errorf("userRepository.Create: %w", apperr.Conflict("user already exists"))
+		}
+		return fmt.Errorf("userRepository.Create: %w", apperr.Internal(err))
 	}
 	return nil
 }
@@ -145,10 +158,10 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 		WHERE id = $7`
 	result, err := r.dbFromContext(ctx).Exec(ctx, query, user.Email, user.Name, user.Phone, user.Avatar, user.Role, user.Verified, user.ID)
 	if err != nil {
-		return fmt.Errorf("userRepository.Update: %w", MapError(err))
+		return fmt.Errorf("userRepository.Update: %w", apperr.Internal(err))
 	}
 	if result.RowsAffected() == 0 {
-		return ErrNotFound
+		return apperr.NotFound("user not found", nil)
 	}
 	if err := r.cache.Delete(ctx, user.ID); err != nil {
 		log.Printf("cache delete failed for user:%s: %v", user.ID, err)
@@ -160,10 +173,10 @@ func (r *userRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM users WHERE id = $1`
 	result, err := r.dbFromContext(ctx).Exec(ctx, query, id)
 	if err != nil {
-		return fmt.Errorf("userRepository.Delete: %w", MapError(err))
+		return fmt.Errorf("userRepository.Delete: %w", apperr.Internal(err))
 	}
 	if result.RowsAffected() == 0 {
-		return ErrNotFound
+		return apperr.NotFound("user not found", nil)
 	}
 	if err := r.cache.Delete(ctx, id); err != nil {
 		log.Printf("cache delete failed for user:%s: %v", id, err)

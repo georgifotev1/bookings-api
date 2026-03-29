@@ -9,16 +9,14 @@ import (
 	"github.com/georgifotev1/nuvelaone-api/pkg/jsonutil"
 	"github.com/georgifotev1/nuvelaone-api/pkg/validator"
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 )
 
 type InvitationHandler struct {
-	svc    service.InvitationService
-	logger *zap.SugaredLogger
+	svc service.InvitationService
 }
 
-func NewInvitationHandler(svc service.InvitationService, logger *zap.SugaredLogger) *InvitationHandler {
-	return &InvitationHandler{svc: svc, logger: logger}
+func NewInvitationHandler(svc service.InvitationService) *InvitationHandler {
+	return &InvitationHandler{svc: svc}
 }
 
 // Create godoc
@@ -50,7 +48,7 @@ func (h *InvitationHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	invitation, err := h.svc.CreateInvitation(ctx, claims.UserID, claims.TenantID, req)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -73,7 +71,7 @@ func (h *InvitationHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	invitations, err := h.svc.ListInvitations(ctx, claims.TenantID)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -98,7 +96,7 @@ func (h *InvitationHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	if err := h.svc.RevokeInvitation(ctx, id, claims.TenantID); err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -123,7 +121,7 @@ func (h *InvitationHandler) Resend(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	if err := h.svc.ResendInvitation(ctx, id, claims.UserID); err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -155,7 +153,7 @@ func (h *InvitationHandler) Accept(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.svc.AcceptInvitation(r.Context(), req)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 

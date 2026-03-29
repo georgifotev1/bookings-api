@@ -20,10 +20,6 @@ type Meta struct {
 	PerPage int `json:"per_page"`
 }
 
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
-
 func NewResponse[T any](data T) Response[T] {
 	return Response[T]{Data: data}
 }
@@ -43,6 +39,10 @@ func Write(w http.ResponseWriter, status int, data any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	return json.NewEncoder(w).Encode(data)
+}
+
+type ErrorResponse struct {
+	Error string `json:"error"`
 }
 
 func WriteError(w http.ResponseWriter, status int, message string) {

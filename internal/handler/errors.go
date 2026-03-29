@@ -2,41 +2,38 @@ package handler
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
-	"github.com/georgifotev1/nuvelaone-api/internal/service"
+	apperr "github.com/georgifotev1/nuvelaone-api/internal/errors"
 	"github.com/georgifotev1/nuvelaone-api/pkg/jsonutil"
-	"go.uber.org/zap"
 )
 
-func handleError(w http.ResponseWriter, err error, logger *zap.SugaredLogger) {
-	switch {
-	case errors.Is(err, service.ErrNotFound):
-		jsonutil.WriteError(w, http.StatusNotFound, err.Error())
-	case errors.Is(err, service.ErrConflict):
-		jsonutil.WriteError(w, http.StatusConflict, err.Error())
-	case errors.Is(err, service.ErrInvalidCredentials):
-		jsonutil.WriteError(w, http.StatusUnauthorized, err.Error())
-	case errors.Is(err, service.ErrInvalidToken):
-		jsonutil.WriteError(w, http.StatusUnauthorized, err.Error())
-	case errors.Is(err, service.ErrForbidden):
-		jsonutil.WriteError(w, http.StatusForbidden, err.Error())
-	case errors.Is(err, service.ErrBadRequest):
-		jsonutil.WriteError(w, http.StatusBadRequest, err.Error())
-	case errors.Is(err, service.ErrNotProTier):
-		jsonutil.WriteError(w, http.StatusForbidden, "only pro tier owners can invite users")
-	case errors.Is(err, service.ErrInvitationExists):
-		jsonutil.WriteError(w, http.StatusConflict, "invitation already exists for this email")
-	case errors.Is(err, service.ErrUserAlreadyInTenant):
-		jsonutil.WriteError(w, http.StatusConflict, "user already exists in this tenant")
-	case errors.Is(err, service.ErrInvitationNotFound):
-		jsonutil.WriteError(w, http.StatusNotFound, "invitation not found")
-	case errors.Is(err, service.ErrInvitationExpired):
-		jsonutil.WriteError(w, http.StatusGone, "invitation has expired")
-	case errors.Is(err, service.ErrInvitationAccepted):
-		jsonutil.WriteError(w, http.StatusGone, "invitation already accepted")
-	default:
-		logger.Errorw("internal server error", "error", err)
-		jsonutil.WriteError(w, http.StatusInternalServerError, "internal server error")
+func writeError(w http.ResponseWriter, err error) {
+	var appErr *apperr.AppError
+
+	if !errors.As(err, &appErr) {
+		slog.Error("unknown error", "error", err)
+		jsonutil.WriteError(w, http.StatusInternalServerError, "an unexpected error occurred")
+		return
 	}
+
+	status := http.StatusInternalServerError
+	switch {
+	case errors.Is(appErr.Err, apperr.ErrNotFound):
+		status = http.StatusNotFound
+	case errors.Is(appErr.Err, apperr.ErrConflict):
+		status = http.StatusConflict
+	case errors.Is(appErr.Err, apperr.ErrValidation):
+		status = http.StatusBadRequest
+	case errors.Is(appErr.Err, apperr.ErrUnauthorized):
+		status = http.StatusUnauthorized
+	case errors.Is(appErr.Err, apperr.ErrForbidden):
+		status = http.StatusForbidden
+	case errors.Is(appErr.Err, apperr.ErrInternal):
+		slog.Error("internal error", "error", appErr.Cause())
+		status = http.StatusInternalServerError
+	}
+
+	jsonutil.Write(w, status, jsonutil.ErrorResponse{Error: appErr.Message})
 }

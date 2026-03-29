@@ -6,6 +6,7 @@ import (
 
 	"github.com/georgifotev1/nuvelaone-api/internal/cache"
 	"github.com/georgifotev1/nuvelaone-api/internal/domain"
+	apperr "github.com/georgifotev1/nuvelaone-api/internal/errors"
 	"github.com/georgifotev1/nuvelaone-api/internal/txmanager"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -65,7 +66,10 @@ func (r *tenantRepository) GetByID(ctx context.Context, id string) (*domain.Tena
 		&t.UpdatedAt,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("tenantRepository.GetByID: %w", MapError(err))
+		if isNotFound(err) {
+			return nil, fmt.Errorf("tenantRepository.GetByID: %w", apperr.NotFound("tenant not found", err))
+		}
+		return nil, fmt.Errorf("tenantRepository.GetByID: %w", apperr.Internal(err))
 	}
 
 	if err := r.cache.Set(ctx, id, &t); err != nil {
@@ -92,7 +96,10 @@ func (r *tenantRepository) Create(ctx context.Context, tenant *domain.Tenant) er
 		tenant.UpdatedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("tenantRepository.Create: %w", MapError(err))
+		if isUniqueViolation(err) {
+			return fmt.Errorf("tenantRepository.Create: %w", apperr.Conflict("tenant already exists"))
+		}
+		return fmt.Errorf("tenantRepository.Create: %w", apperr.Internal(err))
 	}
 
 	return nil
@@ -114,7 +121,7 @@ func (r *tenantRepository) GetWorkingHours(ctx context.Context, tenantID string)
 
 	rows, err := r.dbFromContext(ctx).Query(ctx, query, tenantID)
 	if err != nil {
-		return nil, fmt.Errorf("tenantRepository.GetWorkingHours: %w", MapError(err))
+		return nil, fmt.Errorf("tenantRepository.GetWorkingHours: %w", apperr.Internal(err))
 	}
 	defer rows.Close()
 
@@ -122,9 +129,12 @@ func (r *tenantRepository) GetWorkingHours(ctx context.Context, tenantID string)
 	for rows.Next() {
 		var h domain.WorkingHours
 		if err := rows.Scan(&h.ID, &h.TenantID, &h.DayOfWeek, &h.OpensAt, &h.ClosesAt, &h.IsClosed); err != nil {
-			return nil, fmt.Errorf("tenantRepository.GetWorkingHours scan: %w", err)
+			return nil, fmt.Errorf("tenantRepository.GetWorkingHours scan: %w", apperr.Internal(err))
 		}
 		workingHours = append(workingHours, h)
+	}
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("tenantRepository.GetWorkingHours: %w", apperr.Internal(rows.Err()))
 	}
 
 	if err := r.cache.WorkingHours.Set(ctx, tenantID, &workingHours); err != nil {
@@ -152,11 +162,11 @@ func (r *tenantRepository) Update(ctx context.Context, tenant *domain.Tenant) er
 		tenant.UpdatedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("tenantRepository.Update: %w", MapError(err))
+		return fmt.Errorf("tenantRepository.Update: %w", apperr.Internal(err))
 	}
 
 	if result.RowsAffected() == 0 {
-		return ErrNotFound
+		return apperr.NotFound("tenant not found", nil)
 	}
 
 	if err := r.cache.Delete(ctx, tenant.ID); err != nil {
@@ -188,7 +198,7 @@ func (r *tenantRepository) UpsertWorkingHours(ctx context.Context, tenantID stri
 			h.ID, tenantID, h.DayOfWeek, h.OpensAt, h.ClosesAt, h.IsClosed,
 		)
 		if err != nil {
-			return fmt.Errorf("tenantRepository.UpsertWorkingHours: %w", MapError(err))
+			return fmt.Errorf("tenantRepository.UpsertWorkingHours: %w", apperr.Internal(err))
 		}
 	}
 

@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/georgifotev1/nuvelaone-api/internal/domain"
@@ -36,9 +35,6 @@ func NewUserService(
 func (s *userService) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	user, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return nil, ErrNotFound
-		}
 		return nil, fmt.Errorf("userService.GetByID: %w", err)
 	}
 	return user, nil
@@ -51,9 +47,6 @@ func (s *userService) List(ctx context.Context, tenandID string) ([]domain.User,
 func (s *userService) Update(ctx context.Context, id string, req domain.UpdateUserRequest) (*domain.User, error) {
 	user, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return nil, ErrNotFound
-		}
 		return nil, fmt.Errorf("userService.Update: %w", err)
 	}
 	if req.Email != "" {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/georgifotev1/nuvelaone-api/internal/cache"
 	"github.com/georgifotev1/nuvelaone-api/internal/domain"
+	apperr "github.com/georgifotev1/nuvelaone-api/internal/errors"
 	"github.com/georgifotev1/nuvelaone-api/internal/txmanager"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/segmentio/ksuid"
@@ -65,7 +66,10 @@ func (r *serviceRepository) GetByID(ctx context.Context, tenantID, id string) (*
 		&s.UpdatedAt,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("serviceRepository.GetByID: %w", MapError(err))
+		if isNotFound(err) {
+			return nil, fmt.Errorf("serviceRepository.GetByID: %w", apperr.NotFound("service not found", err))
+		}
+		return nil, fmt.Errorf("serviceRepository.GetByID: %w", apperr.Internal(err))
 	}
 
 	if err := r.cache.Set(ctx, id, &s); err != nil {
@@ -83,7 +87,7 @@ func (r *serviceRepository) ListByTenant(ctx context.Context, tenantID string) (
 
 	rows, err := r.dbFromContext(ctx).Query(ctx, query, tenantID)
 	if err != nil {
-		return nil, fmt.Errorf("serviceRepository.ListByTenant: %w", MapError(err))
+		return nil, fmt.Errorf("serviceRepository.ListByTenant: %w", apperr.Internal(err))
 	}
 	defer rows.Close()
 
@@ -102,9 +106,12 @@ func (r *serviceRepository) ListByTenant(ctx context.Context, tenantID string) (
 			&s.CreatedAt,
 			&s.UpdatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("serviceRepository.ListByTenant scan: %w", err)
+			return nil, fmt.Errorf("serviceRepository.ListByTenant scan: %w", apperr.Internal(err))
 		}
 		services = append(services, s)
+	}
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("serviceRepository.ListByTenant: %w", apperr.Internal(rows.Err()))
 	}
 	return services, nil
 }
@@ -127,7 +134,10 @@ func (r *serviceRepository) Create(ctx context.Context, service *domain.Service)
 		service.UpdatedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("serviceRepository.Create: %w", MapError(err))
+		if isUniqueViolation(err) {
+			return fmt.Errorf("serviceRepository.Create: %w", apperr.Conflict("service already exists"))
+		}
+		return fmt.Errorf("serviceRepository.Create: %w", apperr.Internal(err))
 	}
 	return nil
 }
@@ -149,10 +159,10 @@ func (r *serviceRepository) Update(ctx context.Context, service *domain.Service)
 		service.UpdatedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("serviceRepository.Update: %w", MapError(err))
+		return fmt.Errorf("serviceRepository.Update: %w", apperr.Internal(err))
 	}
 	if result.RowsAffected() == 0 {
-		return ErrNotFound
+		return apperr.NotFound("service not found", nil)
 	}
 
 	if err := r.cache.Delete(ctx, service.ID); err != nil {
@@ -166,10 +176,10 @@ func (r *serviceRepository) Delete(ctx context.Context, tenantID, id string) err
 	query := `DELETE FROM services WHERE id = $1 AND tenant_id = $2`
 	result, err := r.dbFromContext(ctx).Exec(ctx, query, id, tenantID)
 	if err != nil {
-		return fmt.Errorf("serviceRepository.Delete: %w", MapError(err))
+		return fmt.Errorf("serviceRepository.Delete: %w", apperr.Internal(err))
 	}
 	if result.RowsAffected() == 0 {
-		return ErrNotFound
+		return apperr.NotFound("service not found", nil)
 	}
 
 	if err := r.cache.Delete(ctx, id); err != nil {
@@ -188,7 +198,7 @@ func (r *serviceRepository) AssignUsers(ctx context.Context, serviceID string, u
 
 	deleteQuery := `DELETE FROM user_services WHERE service_id = $1 AND tenant_id = $2`
 	if _, err := db.Exec(ctx, deleteQuery, serviceID, tenantID); err != nil {
-		return fmt.Errorf("serviceRepository.AssignUsers delete: %w", MapError(err))
+		return fmt.Errorf("serviceRepository.AssignUsers delete: %w", apperr.Internal(err))
 	}
 
 	insertQuery := `
@@ -205,7 +215,7 @@ func (r *serviceRepository) AssignUsers(ctx context.Context, serviceID string, u
 			now,
 			now,
 		); err != nil {
-			return fmt.Errorf("serviceRepository.AssignUsers insert: %w", MapError(err))
+			return fmt.Errorf("serviceRepository.AssignUsers insert: %w", apperr.Internal(err))
 		}
 	}
 
@@ -219,7 +229,7 @@ func (r *serviceRepository) GetUserServices(ctx context.Context, serviceID strin
 
 	rows, err := r.dbFromContext(ctx).Query(ctx, query, serviceID)
 	if err != nil {
-		return nil, fmt.Errorf("serviceRepository.GetUserServices: %w", MapError(err))
+		return nil, fmt.Errorf("serviceRepository.GetUserServices: %w", apperr.Internal(err))
 	}
 	defer rows.Close()
 
@@ -227,9 +237,12 @@ func (r *serviceRepository) GetUserServices(ctx context.Context, serviceID strin
 	for rows.Next() {
 		var us domain.UserService
 		if err := rows.Scan(&us.ID, &us.UserID, &us.ServiceID, &us.TenantID, &us.CreatedAt, &us.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("serviceRepository.GetUserServices scan: %w", err)
+			return nil, fmt.Errorf("serviceRepository.GetUserServices scan: %w", apperr.Internal(err))
 		}
 		userServices = append(userServices, us)
+	}
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("serviceRepository.GetUserServices: %w", apperr.Internal(rows.Err()))
 	}
 	return userServices, nil
 }

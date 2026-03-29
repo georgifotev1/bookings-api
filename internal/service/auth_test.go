@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/georgifotev1/nuvelaone-api/internal/domain"
+	apperr "github.com/georgifotev1/nuvelaone-api/internal/errors"
 	"github.com/georgifotev1/nuvelaone-api/internal/repository"
 	"github.com/georgifotev1/nuvelaone-api/internal/tasks"
 	"github.com/georgifotev1/nuvelaone-api/internal/txmanager"
@@ -53,7 +54,7 @@ func TestAuthService_Register(t *testing.T) {
 				Name:     "Test User",
 			},
 			setupMocks: func(userRepo *repository.MockUserRepository, tenantRepo *repository.MockTenantRepository, txManager *txmanager.MockTxManager, taskClient *tasks.MockTaskEnqueuer) {
-				txManager.On("WithTx", mock.Anything, mock.Anything).Return(repository.ErrDuplicate).Run(func(args mock.Arguments) {
+				txManager.On("WithTx", mock.Anything, mock.Anything).Return(apperr.Conflict("user already exists")).Run(func(args mock.Arguments) {
 					fn := args.Get(1).(func(context.Context) error)
 					_ = fn(context.Background())
 				})
@@ -61,7 +62,7 @@ func TestAuthService_Register(t *testing.T) {
 				tenantRepo.On("UpsertWorkingHours", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 				userRepo.On("Create", mock.Anything, mock.Anything).Return(nil)
 			},
-			expectedErr: ErrConflict,
+			expectedErr: apperr.ErrConflict,
 		},
 	}
 
@@ -153,9 +154,9 @@ func TestAuthService_Login(t *testing.T) {
 				Password: "password123",
 			},
 			setupMocks: func(userRepo *repository.MockUserRepository, tokenRepo *repository.MockTokenRepository) {
-				userRepo.On("GetByEmail", context.Background(), "nonexistent@example.com").Return(nil, repository.ErrNotFound)
+				userRepo.On("GetByEmail", context.Background(), "nonexistent@example.com").Return(nil, apperr.NotFound("user not found", nil))
 			},
-			expectedErr: ErrInvalidCredentials,
+			expectedErr: apperr.ErrUnauthorized,
 		},
 		{
 			name: "invalid password",
@@ -166,7 +167,7 @@ func TestAuthService_Login(t *testing.T) {
 			setupMocks: func(userRepo *repository.MockUserRepository, tokenRepo *repository.MockTokenRepository) {
 				userRepo.On("GetByEmail", context.Background(), userEmail).Return(testUser, nil)
 			},
-			expectedErr: ErrInvalidCredentials,
+			expectedErr: apperr.ErrUnauthorized,
 		},
 	}
 
@@ -230,9 +231,9 @@ func TestAuthService_Logout(t *testing.T) {
 			name:     "invalid token - not found",
 			rawToken: "invalid-refresh-token",
 			setupMocks: func(tokenRepo *repository.MockTokenRepository) {
-				tokenRepo.On("Revoke", context.Background(), mock.Anything).Return(repository.ErrNotFound)
+				tokenRepo.On("Revoke", context.Background(), mock.Anything).Return(apperr.Unauthorized("invalid token"))
 			},
-			expectedErr: ErrInvalidToken,
+			expectedErr: apperr.ErrUnauthorized,
 		},
 	}
 
@@ -328,9 +329,9 @@ func TestAuthService_Refresh(t *testing.T) {
 			name:     "invalid token - not found",
 			rawToken: "invalid-refresh-token",
 			setupMocks: func(tokenRepo *repository.MockTokenRepository, userRepo *repository.MockUserRepository, txManager *txmanager.MockTxManager) {
-				tokenRepo.On("GetByHash", context.Background(), mock.Anything).Return(nil, repository.ErrNotFound)
+				tokenRepo.On("GetByHash", context.Background(), mock.Anything).Return(nil, apperr.NotFound("token not found", nil))
 			},
-			expectedErr: ErrInvalidToken,
+			expectedErr: apperr.ErrUnauthorized,
 		},
 		{
 			name:     "expired token",
@@ -338,7 +339,7 @@ func TestAuthService_Refresh(t *testing.T) {
 			setupMocks: func(tokenRepo *repository.MockTokenRepository, userRepo *repository.MockUserRepository, txManager *txmanager.MockTxManager) {
 				tokenRepo.On("GetByHash", context.Background(), mock.Anything).Return(expiredToken, nil)
 			},
-			expectedErr: ErrInvalidToken,
+			expectedErr: apperr.ErrUnauthorized,
 		},
 		{
 			name:     "revoked token - should revoke all",
@@ -347,16 +348,16 @@ func TestAuthService_Refresh(t *testing.T) {
 				tokenRepo.On("GetByHash", context.Background(), mock.Anything).Return(revokedToken, nil)
 				tokenRepo.On("RevokeAllForUser", context.Background(), userID).Return(nil)
 			},
-			expectedErr: ErrInvalidToken,
+			expectedErr: apperr.ErrUnauthorized,
 		},
 		{
 			name:     "user not found",
 			rawToken: "valid-refresh-token",
 			setupMocks: func(tokenRepo *repository.MockTokenRepository, userRepo *repository.MockUserRepository, txManager *txmanager.MockTxManager) {
 				tokenRepo.On("GetByHash", context.Background(), mock.Anything).Return(testToken, nil)
-				userRepo.On("GetByID", context.Background(), userID).Return(nil, repository.ErrNotFound)
+				userRepo.On("GetByID", context.Background(), userID).Return(nil, apperr.NotFound("user not found", nil))
 			},
-			expectedErr: ErrInvalidToken,
+			expectedErr: apperr.ErrUnauthorized,
 		},
 	}
 

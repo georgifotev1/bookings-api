@@ -9,16 +9,14 @@ import (
 	"github.com/georgifotev1/nuvelaone-api/pkg/jsonutil"
 	"github.com/georgifotev1/nuvelaone-api/pkg/validator"
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 )
 
 type ServiceHandler struct {
-	svc    svc.ServiceService
-	logger *zap.SugaredLogger
+	svc svc.ServiceService
 }
 
-func NewServiceHandler(svc svc.ServiceService, logger *zap.SugaredLogger) *ServiceHandler {
-	return &ServiceHandler{svc: svc, logger: logger}
+func NewServiceHandler(svc svc.ServiceService) *ServiceHandler {
+	return &ServiceHandler{svc: svc}
 }
 
 // List godoc
@@ -37,7 +35,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	services, err := h.svc.ListByTenant(ctx, claims.TenantID)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -68,7 +66,7 @@ func (h *ServiceHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	service, err := h.svc.GetByID(ctx, claims.TenantID, id)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -106,7 +104,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	service, err := h.svc.Create(ctx, claims.TenantID, req)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -147,7 +145,7 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	service, err := h.svc.Update(ctx, claims.TenantID, id, req)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -179,7 +177,7 @@ func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	err := h.svc.Delete(ctx, claims.TenantID, id)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 

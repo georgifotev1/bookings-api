@@ -9,16 +9,14 @@ import (
 	"github.com/georgifotev1/nuvelaone-api/pkg/jsonutil"
 	"github.com/georgifotev1/nuvelaone-api/pkg/validator"
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 )
 
 type CustomerHandler struct {
-	svc    svc.CustomerService
-	logger *zap.SugaredLogger
+	svc svc.CustomerService
 }
 
-func NewCustomerHandler(svc svc.CustomerService, logger *zap.SugaredLogger) *CustomerHandler {
-	return &CustomerHandler{svc: svc, logger: logger}
+func NewCustomerHandler(svc svc.CustomerService) *CustomerHandler {
+	return &CustomerHandler{svc: svc}
 }
 
 // List godoc
@@ -37,7 +35,7 @@ func (h *CustomerHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	customers, err := h.svc.ListByTenant(ctx, claims.TenantID)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -68,7 +66,7 @@ func (h *CustomerHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	customer, err := h.svc.GetByID(ctx, claims.TenantID, id)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -106,7 +104,7 @@ func (h *CustomerHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	customer, err := h.svc.Create(ctx, claims.TenantID, req)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -146,7 +144,7 @@ func (h *CustomerHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	customer, err := h.svc.Update(ctx, claims.TenantID, id, req)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -178,7 +176,7 @@ func (h *CustomerHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	err := h.svc.Delete(ctx, claims.TenantID, id)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 

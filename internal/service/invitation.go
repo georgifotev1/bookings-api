@@ -4,26 +4,17 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/georgifotev1/nuvelaone-api/internal/domain"
+	apperr "github.com/georgifotev1/nuvelaone-api/internal/errors"
 	"github.com/georgifotev1/nuvelaone-api/internal/repository"
 	"github.com/georgifotev1/nuvelaone-api/internal/tasks"
 	"github.com/georgifotev1/nuvelaone-api/internal/txmanager"
 	"github.com/georgifotev1/nuvelaone-api/pkg/auth"
 	"github.com/segmentio/ksuid"
 	"go.uber.org/zap"
-)
-
-var (
-	ErrNotProTier          = errors.New("only pro tier owners can invite users")
-	ErrInvitationExists    = errors.New("invitation already exists for this email")
-	ErrUserAlreadyInTenant = errors.New("user already exists in this tenant")
-	ErrInvitationNotFound  = errors.New("invitation not found")
-	ErrInvitationExpired   = errors.New("invitation has expired")
-	ErrInvitationAccepted  = errors.New("invitation already accepted")
 )
 
 type InvitationConfig struct {
@@ -76,23 +67,23 @@ func (s *invitationService) CreateInvitation(ctx context.Context, invitedByUserI
 	}
 
 	if tenant.Tier != domain.TierPro {
-		return nil, ErrNotProTier
+		return nil, apperr.Forbidden("only pro tier owners can invite users")
 	}
 
 	existingUser, err := s.userRepo.GetByEmail(ctx, req.Email)
-	if err != nil && !errors.Is(err, repository.ErrNotFound) {
+	if err != nil {
 		return nil, fmt.Errorf("invitationService.CreateInvitation get user: %w", err)
 	}
 	if existingUser != nil && existingUser.TenantID == tenantID {
-		return nil, ErrUserAlreadyInTenant
+		return nil, apperr.Conflict("user already exists in this tenant")
 	}
 
 	existingInv, err := s.invitationRepo.GetByEmailAndTenant(ctx, req.Email, tenantID)
-	if err != nil && !errors.Is(err, repository.ErrNotFound) {
+	if err != nil {
 		return nil, fmt.Errorf("invitationService.CreateInvitation get existing invitation: %w", err)
 	}
 	if existingInv != nil {
-		return nil, ErrInvitationExists
+		return nil, apperr.Conflict("invitation already exists for this email")
 	}
 
 	token, err := generateSecureToken()
@@ -147,22 +138,19 @@ func (s *invitationService) CreateInvitation(ctx context.Context, invitedByUserI
 func (s *invitationService) AcceptInvitation(ctx context.Context, req domain.AcceptInvitationRequest) (*domain.User, error) {
 	invitation, err := s.invitationRepo.GetByToken(ctx, req.Token)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return nil, ErrInvitationNotFound
-		}
 		return nil, fmt.Errorf("invitationService.AcceptInvitation get by token: %w", err)
 	}
 
 	if invitation.Accepted {
-		return nil, ErrInvitationAccepted
+		return nil, apperr.Conflict("invitation already accepted")
 	}
 
 	if time.Now().After(invitation.ExpiresAt) {
-		return nil, ErrInvitationExpired
+		return nil, apperr.Forbidden("invitation has expired")
 	}
 
 	if req.Password != req.PasswordConfirm {
-		return nil, fmt.Errorf("passwords do not match")
+		return nil, apperr.Validation("passwords do not match")
 	}
 
 	hashed, err := auth.HashPassword(req.Password)
@@ -204,14 +192,11 @@ func (s *invitationService) AcceptInvitation(ctx context.Context, req domain.Acc
 func (s *invitationService) ResendInvitation(ctx context.Context, invitationID, invitedByUserID string) error {
 	invitation, err := s.invitationRepo.GetByID(ctx, invitationID)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return ErrInvitationNotFound
-		}
 		return fmt.Errorf("invitationService.ResendInvitation get: %w", err)
 	}
 
 	if invitation.Accepted {
-		return ErrInvitationAccepted
+		return apperr.Conflict("invitation already accepted")
 	}
 
 	inviter, err := s.userRepo.GetByID(ctx, invitedByUserID)
@@ -220,7 +205,7 @@ func (s *invitationService) ResendInvitation(ctx context.Context, invitationID, 
 	}
 
 	if inviter.TenantID != invitation.TenantID {
-		return ErrInvitationNotFound
+		return apperr.NotFound("invitation not found", nil)
 	}
 
 	tenant, err := s.tenantRepo.GetByID(ctx, invitation.TenantID)
@@ -229,7 +214,7 @@ func (s *invitationService) ResendInvitation(ctx context.Context, invitationID, 
 	}
 
 	if tenant.Tier != domain.TierPro {
-		return ErrNotProTier
+		return apperr.Forbidden("only pro tier owners can invite users")
 	}
 
 	token, err := generateSecureToken()
@@ -276,14 +261,11 @@ func (s *invitationService) ListInvitations(ctx context.Context, tenantID string
 func (s *invitationService) RevokeInvitation(ctx context.Context, invitationID, tenantID string) error {
 	invitation, err := s.invitationRepo.GetByID(ctx, invitationID)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return ErrInvitationNotFound
-		}
 		return fmt.Errorf("invitationService.RevokeInvitation get: %w", err)
 	}
 
 	if invitation.TenantID != tenantID {
-		return ErrInvitationNotFound
+		return apperr.NotFound("invitation not found", nil)
 	}
 
 	if err := s.invitationRepo.Delete(ctx, invitationID); err != nil {

@@ -7,16 +7,14 @@ import (
 	"github.com/georgifotev1/nuvelaone-api/internal/service"
 	"github.com/georgifotev1/nuvelaone-api/pkg/auth"
 	"github.com/georgifotev1/nuvelaone-api/pkg/jsonutil"
-	"go.uber.org/zap"
 )
 
 type TenantHandler struct {
-	svc    service.TenantService
-	logger *zap.SugaredLogger
+	svc service.TenantService
 }
 
-func NewTenantHandler(svc service.TenantService, logger *zap.SugaredLogger) *TenantHandler {
-	return &TenantHandler{svc: svc, logger: logger}
+func NewTenantHandler(svc service.TenantService) *TenantHandler {
+	return &TenantHandler{svc: svc}
 }
 
 type TenantResponse struct {
@@ -41,7 +39,7 @@ func (h *TenantHandler) GetMyTenant(w http.ResponseWriter, r *http.Request) {
 
 	tenant, hours, err := h.svc.GetMyTenant(ctx, claims.TenantID)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 
@@ -83,7 +81,7 @@ func (h *TenantHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	tenant, err := h.svc.Update(ctx, claims.TenantID, req)
 	if err != nil {
-		handleError(w, err, h.logger)
+		writeError(w, err)
 		return
 	}
 

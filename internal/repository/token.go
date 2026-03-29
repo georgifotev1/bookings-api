@@ -2,8 +2,10 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/georgifotev1/nuvelaone-api/internal/domain"
+	apperr "github.com/georgifotev1/nuvelaone-api/internal/errors"
 	"github.com/georgifotev1/nuvelaone-api/internal/txmanager"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -38,7 +40,10 @@ func (r *tokenRepository) Store(ctx context.Context, token *domain.RefreshToken)
 	_, err := r.dbFromContext(ctx).Exec(ctx, query,
 		token.ID, token.UserID, token.TokenHash, token.ExpiresAt, token.CreatedAt,
 	)
-	return MapError(err)
+	if err != nil {
+		return apperr.Internal(err)
+	}
+	return nil
 }
 
 func (r *tokenRepository) GetByHash(ctx context.Context, hash string) (*domain.RefreshToken, error) {
@@ -49,7 +54,10 @@ func (r *tokenRepository) GetByHash(ctx context.Context, hash string) (*domain.R
 	t := &domain.RefreshToken{}
 	err := row.Scan(&t.ID, &t.UserID, &t.TokenHash, &t.ExpiresAt, &t.CreatedAt, &t.RevokedAt)
 	if err != nil {
-		return nil, MapError(err)
+		if isNotFound(err) {
+			return nil, fmt.Errorf("tokenRepository.GetByHash: %w", apperr.NotFound("token not found", err))
+		}
+		return nil, fmt.Errorf("tokenRepository.GetByHash: %w", apperr.Internal(err))
 	}
 	return t, nil
 }
@@ -60,10 +68,10 @@ func (r *tokenRepository) Revoke(ctx context.Context, hash string) error {
 		WHERE token_hash = $1 AND revoked_at IS NULL`
 	result, err := r.dbFromContext(ctx).Exec(ctx, query, hash)
 	if err != nil {
-		return MapError(err)
+		return apperr.Internal(err)
 	}
 	if result.RowsAffected() == 0 {
-		return ErrNotFound
+		return apperr.NotFound("token not found", nil)
 	}
 	return nil
 }
@@ -73,11 +81,17 @@ func (r *tokenRepository) RevokeAllForUser(ctx context.Context, userID string) e
 		UPDATE refresh_tokens SET revoked_at = NOW()
 		WHERE user_id = $1 AND revoked_at IS NULL`
 	_, err := r.dbFromContext(ctx).Exec(ctx, query, userID)
-	return MapError(err)
+	if err != nil {
+		return apperr.Internal(err)
+	}
+	return nil
 }
 
 func (r *tokenRepository) DeleteExpired(ctx context.Context) error {
 	query := `DELETE FROM refresh_tokens WHERE expires_at < NOW()`
 	_, err := r.pool.Exec(ctx, query)
-	return MapError(err)
+	if err != nil {
+		return apperr.Internal(err)
+	}
+	return nil
 }

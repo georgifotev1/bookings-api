@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/georgifotev1/nuvelaone-api/internal/domain"
+	apperr "github.com/georgifotev1/nuvelaone-api/internal/errors"
 	"github.com/georgifotev1/nuvelaone-api/internal/txmanager"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -57,7 +58,10 @@ func (r *invitationRepository) GetByID(ctx context.Context, id string) (*domain.
 		&inv.CreatedAt,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("invitationRepository.GetByID: %w", MapError(err))
+		if isNotFound(err) {
+			return nil, fmt.Errorf("invitationRepository.GetByID: %w", apperr.NotFound("invitation not found", err))
+		}
+		return nil, fmt.Errorf("invitationRepository.GetByID: %w", apperr.Internal(err))
 	}
 
 	return &inv, nil
@@ -84,7 +88,10 @@ func (r *invitationRepository) GetByToken(ctx context.Context, token string) (*d
 		&inv.CreatedAt,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("invitationRepository.GetByToken: %w", MapError(err))
+		if isNotFound(err) {
+			return nil, fmt.Errorf("invitationRepository.GetByToken: %w", apperr.NotFound("invitation not found", err))
+		}
+		return nil, fmt.Errorf("invitationRepository.GetByToken: %w", apperr.Internal(err))
 	}
 
 	return &inv, nil
@@ -111,7 +118,10 @@ func (r *invitationRepository) GetByEmailAndTenant(ctx context.Context, email, t
 		&inv.CreatedAt,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("invitationRepository.GetByEmailAndTenant: %w", MapError(err))
+		if isNotFound(err) {
+			return nil, fmt.Errorf("invitationRepository.GetByEmailAndTenant: %w", apperr.NotFound("invitation not found", err))
+		}
+		return nil, fmt.Errorf("invitationRepository.GetByEmailAndTenant: %w", apperr.Internal(err))
 	}
 
 	return &inv, nil
@@ -124,7 +134,7 @@ func (r *invitationRepository) ListByTenant(ctx context.Context, tenantID string
 
 	rows, err := r.dbFromContext(ctx).Query(ctx, query, tenantID)
 	if err != nil {
-		return nil, fmt.Errorf("invitationRepository.ListByTenant: %w", MapError(err))
+		return nil, fmt.Errorf("invitationRepository.ListByTenant: %w", apperr.Internal(err))
 	}
 	defer rows.Close()
 
@@ -144,11 +154,14 @@ func (r *invitationRepository) ListByTenant(ctx context.Context, tenantID string
 			&inv.Accepted,
 			&inv.CreatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("invitationRepository.ListByTenant scan: %w", err)
+			return nil, fmt.Errorf("invitationRepository.ListByTenant scan: %w", apperr.Internal(err))
 		}
 		invitations = append(invitations, inv)
 	}
-	return invitations, rows.Err()
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("invitationRepository.ListByTenant: %w", apperr.Internal(rows.Err()))
+	}
+	return invitations, nil
 }
 
 func (r *invitationRepository) Create(ctx context.Context, invitation *domain.UserInvitation) error {
@@ -171,7 +184,10 @@ func (r *invitationRepository) Create(ctx context.Context, invitation *domain.Us
 		invitation.CreatedAt,
 	).Scan(&invitation.CreatedAt)
 	if err != nil {
-		return fmt.Errorf("invitationRepository.Create: %w", MapError(err))
+		if isUniqueViolation(err) {
+			return fmt.Errorf("invitationRepository.Create: %w", apperr.Conflict("invitation already sent"))
+		}
+		return fmt.Errorf("invitationRepository.Create: %w", apperr.Internal(err))
 	}
 
 	return nil
@@ -190,11 +206,11 @@ func (r *invitationRepository) Update(ctx context.Context, invitation *domain.Us
 		invitation.Accepted,
 	)
 	if err != nil {
-		return fmt.Errorf("invitationRepository.Update: %w", MapError(err))
+		return fmt.Errorf("invitationRepository.Update: %w", apperr.Internal(err))
 	}
 
 	if result.RowsAffected() == 0 {
-		return ErrNotFound
+		return apperr.NotFound("invitation not found", nil)
 	}
 
 	return nil
@@ -204,10 +220,10 @@ func (r *invitationRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM user_invitations WHERE id = $1`
 	result, err := r.dbFromContext(ctx).Exec(ctx, query, id)
 	if err != nil {
-		return fmt.Errorf("invitationRepository.Delete: %w", MapError(err))
+		return fmt.Errorf("invitationRepository.Delete: %w", apperr.Internal(err))
 	}
 	if result.RowsAffected() == 0 {
-		return ErrNotFound
+		return apperr.NotFound("invitation not found", nil)
 	}
 	return nil
 }

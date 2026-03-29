@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/georgifotev1/nuvelaone-api/internal/domain"
+	apperr "github.com/georgifotev1/nuvelaone-api/internal/errors"
 	"github.com/georgifotev1/nuvelaone-api/internal/repository"
 	"github.com/georgifotev1/nuvelaone-api/pkg/timeutil"
 	"github.com/segmentio/ksuid"
@@ -33,9 +33,6 @@ func NewTenantService(repo repository.TenantRepository, logger *zap.SugaredLogge
 func (s *tenantService) GetMyTenant(ctx context.Context, tenantID string) (*domain.Tenant, []domain.WorkingHours, error) {
 	tenant, err := s.repo.GetByID(ctx, tenantID)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return nil, nil, ErrNotFound
-		}
 		return nil, nil, fmt.Errorf("tenantService.GetMyTenant: %w", err)
 	}
 
@@ -50,9 +47,6 @@ func (s *tenantService) GetMyTenant(ctx context.Context, tenantID string) (*doma
 func (s *tenantService) Update(ctx context.Context, tenantID string, req domain.UpdateTenantRequest) (*domain.Tenant, error) {
 	tenant, err := s.repo.GetByID(ctx, tenantID)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return nil, ErrNotFound
-		}
 		return nil, fmt.Errorf("tenantService.Update: %w", err)
 	}
 
@@ -70,7 +64,7 @@ func (s *tenantService) Update(ctx context.Context, tenantID string, req domain.
 	}
 	if req.Timezone != "" {
 		if _, err := time.LoadLocation(req.Timezone); err != nil {
-			return nil, fmt.Errorf("invalid timezone: %w", ErrBadRequest)
+			return nil, apperr.Validation("invalid timezone")
 		}
 		tenant.Timezone = req.Timezone
 	}
@@ -91,11 +85,11 @@ func (s *tenantService) Update(ctx context.Context, tenantID string, req domain.
 		for _, wh := range req.WorkingHours {
 			opensAt, err := domain.ParseTimeInLocation(wh.OpensAt, loc)
 			if err != nil {
-				return nil, fmt.Errorf("invalid opens_at %q: %w", wh.OpensAt, ErrBadRequest)
+				return nil, apperr.Validation("invalid opens_at")
 			}
 			closesAt, err := domain.ParseTimeInLocation(wh.ClosesAt, loc)
 			if err != nil {
-				return nil, fmt.Errorf("invalid closes_at %q: %w", wh.ClosesAt, ErrBadRequest)
+				return nil, apperr.Validation("invalid closes_at")
 			}
 
 			hours = append(hours, domain.WorkingHours{
