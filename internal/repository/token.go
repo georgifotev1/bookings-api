@@ -15,6 +15,7 @@ type TokenRepository interface {
 	GetByHash(ctx context.Context, hash string) (*domain.RefreshToken, error)
 	Revoke(ctx context.Context, hash string) error
 	RevokeAllForUser(ctx context.Context, userID string) error
+	RevokeAllForCustomer(ctx context.Context, customerID string) error
 	DeleteExpired(ctx context.Context) error
 }
 
@@ -35,10 +36,10 @@ func (r *tokenRepository) dbFromContext(ctx context.Context) txmanager.DBTX {
 
 func (r *tokenRepository) Store(ctx context.Context, token *domain.RefreshToken) error {
 	query := `
-		INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, created_at)
-		VALUES ($1, $2, $3, $4, $5)`
+		INSERT INTO refresh_tokens (id, user_id, customer_id, token_hash, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`
 	_, err := r.dbFromContext(ctx).Exec(ctx, query,
-		token.ID, token.UserID, token.TokenHash, token.ExpiresAt, token.CreatedAt,
+		token.ID, token.UserID, token.CustomerID, token.TokenHash, token.ExpiresAt, token.CreatedAt,
 	)
 	if err != nil {
 		return apperr.Internal(err)
@@ -48,11 +49,11 @@ func (r *tokenRepository) Store(ctx context.Context, token *domain.RefreshToken)
 
 func (r *tokenRepository) GetByHash(ctx context.Context, hash string) (*domain.RefreshToken, error) {
 	query := `
-		SELECT id, user_id, token_hash, expires_at, created_at, revoked_at
+		SELECT id, user_id, customer_id, token_hash, expires_at, created_at, revoked_at
 		FROM refresh_tokens WHERE token_hash = $1`
 	row := r.dbFromContext(ctx).QueryRow(ctx, query, hash)
 	t := &domain.RefreshToken{}
-	err := row.Scan(&t.ID, &t.UserID, &t.TokenHash, &t.ExpiresAt, &t.CreatedAt, &t.RevokedAt)
+	err := row.Scan(&t.ID, &t.UserID, &t.CustomerID, &t.TokenHash, &t.ExpiresAt, &t.CreatedAt, &t.RevokedAt)
 	if err != nil {
 		if isNotFound(err) {
 			return nil, fmt.Errorf("tokenRepository.GetByHash: %w", apperr.NotFound("token not found", err))
@@ -81,6 +82,17 @@ func (r *tokenRepository) RevokeAllForUser(ctx context.Context, userID string) e
 		UPDATE refresh_tokens SET revoked_at = NOW()
 		WHERE user_id = $1 AND revoked_at IS NULL`
 	_, err := r.dbFromContext(ctx).Exec(ctx, query, userID)
+	if err != nil {
+		return apperr.Internal(err)
+	}
+	return nil
+}
+
+func (r *tokenRepository) RevokeAllForCustomer(ctx context.Context, customerID string) error {
+	query := `
+		UPDATE refresh_tokens SET revoked_at = NOW()
+		WHERE customer_id = $1 AND revoked_at IS NULL`
+	_, err := r.dbFromContext(ctx).Exec(ctx, query, customerID)
 	if err != nil {
 		return apperr.Internal(err)
 	}

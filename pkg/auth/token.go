@@ -23,6 +23,44 @@ type Claims struct {
 	Role     domain.Role `json:"role"`
 }
 
+type CustomerClaims struct {
+	jwt.RegisteredClaims
+	CustomerID string `json:"customer_id"`
+	TenantID   string `json:"tenant_id"`
+}
+
+func GenerateCustomerAccessToken(customer *domain.Customer, secret string, ttl time.Duration) (string, error) {
+	claims := &CustomerClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ttl)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+		CustomerID: customer.ID,
+		TenantID:   customer.TenantID,
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
+}
+
+func ParseCustomerToken(tokenStr string, secret string) (*CustomerClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, &CustomerClaims{}, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, ErrInvalidToken
+		}
+		return []byte(secret), nil
+	})
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return nil, ErrExpiredToken
+		}
+		return nil, ErrInvalidToken
+	}
+	claims, ok := token.Claims.(*CustomerClaims)
+	if !ok || !token.Valid {
+		return nil, ErrInvalidToken
+	}
+	return claims, nil
+}
+
 func GenerateAccessToken(user *domain.User, secret string, ttl time.Duration) (string, error) {
 	claims := &Claims{
 		RegisteredClaims: jwt.RegisteredClaims{

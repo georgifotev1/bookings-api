@@ -29,9 +29,10 @@ type DBConfig struct {
 }
 
 type AuthConfig struct {
-	JWTSecret       string
-	AccessTokenTTL  time.Duration
-	RefreshTokenTTL time.Duration
+	JWTSecret         string
+	CustomerJWTSecret string
+	AccessTokenTTL    time.Duration
+	RefreshTokenTTL   time.Duration
 }
 
 type CORSConfig struct {
@@ -70,9 +71,10 @@ func Load() (*Config, error) {
 			URL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/mydb?sslmode=disable"),
 		},
 		Auth: AuthConfig{
-			JWTSecret:       getEnv("JWT_SECRET", "change-me-in-production"),
-			AccessTokenTTL:  getEnvDuration("ACCESS_TOKEN_TTL", 15*time.Minute),
-			RefreshTokenTTL: getEnvDuration("REFRESH_TOKEN_TTL", 720*time.Hour),
+			JWTSecret:         getEnv("JWT_SECRET", "change-me-in-production"),
+			CustomerJWTSecret: getEnv("CUSTOMER_JWT_SECRET", getEnv("JWT_SECRET", "change-me-in-production")),
+			AccessTokenTTL:    getEnvDuration("ACCESS_TOKEN_TTL", 15*time.Minute),
+			RefreshTokenTTL:   getEnvDuration("REFRESH_TOKEN_TTL", 720*time.Hour),
 		},
 		CORS: CORSConfig{
 			AllowedOrigins: getEnv("CORS_ALLOWED_ORIGIN", "http://localhost:5174"),

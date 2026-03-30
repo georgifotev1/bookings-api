@@ -135,3 +135,114 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	jsonutil.Write(w, http.StatusOK, jsonutil.NewResponse(events))
 }
+
+// ListMyBookings godoc
+//
+//	@Summary		List my bookings
+//	@Description	List bookings for the authenticated customer
+//	@Tags			public
+//	@Produce		json
+//	@Security		CustomerBearerAuth
+//	@Param			slug	path		string	true	"Tenant slug"
+//	@Success		200	{array}	domain.Event
+//	@Router			/p/{slug}/bookings [get]
+func (h *EventHandler) ListMyBookings(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	claims := auth.CustomerClaimsFromContext(ctx)
+	if claims == nil {
+		jsonutil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	events, err := h.svc.ListByCustomer(ctx, claims.TenantID, claims.CustomerID)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	jsonutil.Write(w, http.StatusOK, jsonutil.NewResponse(events))
+}
+
+// CreateCustomerBooking godoc
+//
+//	@Summary		Create booking
+//	@Description	Create a new booking for the authenticated customer
+//	@Tags			public
+//	@Accept			json
+//	@Produce		json
+//	@Security		CustomerBearerAuth
+//	@Param			slug		path		string				true	"Tenant slug"
+//	@Param			request	body		domain.EventRequest	true	"Create request"
+//	@Success		201	{object}	domain.Event
+//	@Router			/p/{slug}/bookings [post]
+func (h *EventHandler) CreateCustomerBooking(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	claims := auth.CustomerClaimsFromContext(ctx)
+	if claims == nil {
+		jsonutil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var req domain.EventRequest
+	if err := jsonutil.Read(r, &req); err != nil {
+		jsonutil.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := validator.Validate(req); err != nil {
+		jsonutil.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	event, err := h.svc.CreateForCustomer(ctx, claims.TenantID, claims.CustomerID, req)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	jsonutil.Write(w, http.StatusCreated, jsonutil.NewResponse(event))
+}
+
+// GetTimeslots godoc
+//
+//	@Summary		Get available timeslots
+//	@Description	Get available timeslots for a service, user, and date
+//	@Tags			public
+//	@Produce		json
+//	@Param			slug		path		string	true	"Tenant slug"
+//	@Param			service_id	query		string	true	"Service ID"
+//	@Param			user_id		query		string	true	"User ID"
+//	@Param			date		query		string	true	"Date (YYYY-MM-DD)"
+//	@Success		200	{object}	domain.TimeslotResponse
+//	@Router			/p/{slug}/timeslots [get]
+func (h *EventHandler) GetTimeslots(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID := domain.TenantIDFromContext(ctx)
+	if tenantID == "" {
+		jsonutil.WriteError(w, http.StatusBadRequest, "tenant not found")
+		return
+	}
+
+	serviceID := r.URL.Query().Get("service_id")
+	userID := r.URL.Query().Get("user_id")
+	date := r.URL.Query().Get("date")
+
+	if serviceID == "" || userID == "" || date == "" {
+		jsonutil.WriteError(w, http.StatusBadRequest, "service_id, user_id, and date are required")
+		return
+	}
+
+	req := domain.TimeslotRequest{
+		ServiceID: serviceID,
+		UserID:    userID,
+		Date:      date,
+	}
+
+	timeslots, err := h.svc.GetTimeslots(ctx, tenantID, req)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	jsonutil.Write(w, http.StatusOK, jsonutil.NewResponse(domain.TimeslotResponse{Timeslots: timeslots}))
+}

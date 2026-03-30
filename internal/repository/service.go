@@ -16,6 +16,7 @@ import (
 type ServiceRepository interface {
 	GetByID(ctx context.Context, tenantID, id string) (*domain.Service, error)
 	ListByTenant(ctx context.Context, tenantID string) ([]domain.Service, error)
+	ListVisible(ctx context.Context, tenantID string) ([]domain.Service, error)
 	Create(ctx context.Context, service *domain.Service) error
 	Update(ctx context.Context, service *domain.Service) error
 	Delete(ctx context.Context, tenantID, id string) error
@@ -112,6 +113,43 @@ func (r *serviceRepository) ListByTenant(ctx context.Context, tenantID string) (
 	}
 	if rows.Err() != nil {
 		return nil, fmt.Errorf("serviceRepository.ListByTenant: %w", apperr.Internal(rows.Err()))
+	}
+	return services, nil
+}
+
+func (r *serviceRepository) ListVisible(ctx context.Context, tenantID string) ([]domain.Service, error) {
+	query := `
+		SELECT id, title, description, duration, buffer, cost, visible, tenant_id, created_at, updated_at
+		FROM services WHERE tenant_id = $1 AND visible = true
+		ORDER BY created_at DESC`
+
+	rows, err := r.dbFromContext(ctx).Query(ctx, query, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("serviceRepository.ListVisible: %w", apperr.Internal(err))
+	}
+	defer rows.Close()
+
+	services := make([]domain.Service, 0)
+	for rows.Next() {
+		var s domain.Service
+		if err := rows.Scan(
+			&s.ID,
+			&s.Title,
+			&s.Description,
+			&s.Duration,
+			&s.Buffer,
+			&s.Cost,
+			&s.Visible,
+			&s.TenantID,
+			&s.CreatedAt,
+			&s.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("serviceRepository.ListVisible scan: %w", apperr.Internal(err))
+		}
+		services = append(services, s)
+	}
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("serviceRepository.ListVisible: %w", apperr.Internal(rows.Err()))
 	}
 	return services, nil
 }

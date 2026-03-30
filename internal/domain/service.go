@@ -24,3 +24,13 @@ type ServiceRequest struct {
 	Visible     bool     `json:"visible"`
 	UserIDs     []string `json:"user_ids"`
 }
+
+type TimeslotRequest struct {
+	ServiceID string `json:"service_id" validate:"required"`
+	UserID    string `json:"user_id" validate:"required"`
+	Date      string `json:"date" validate:"required"`
+}
+
+type TimeslotResponse struct {
+	Timeslots []string `json:"timeslots"`
+}

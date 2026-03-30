@@ -82,6 +82,11 @@ func (app *application) mount() http.Handler {
 		AccessTokenTTL:  app.config.Auth.AccessTokenTTL,
 		RefreshTokenTTL: app.config.Auth.RefreshTokenTTL,
 	})
+	customerAuthSvc := service.NewCustomerAuthService(customerRepo, tokenRepo, app.logger, service.CustomerAuthConfig{
+		AccessSecret:    app.config.Auth.CustomerJWTSecret,
+		AccessTokenTTL:  app.config.Auth.AccessTokenTTL,
+		RefreshTokenTTL: app.config.Auth.RefreshTokenTTL,
+	})
 	invitationSvc := service.NewInvitationService(
 		invitationRepo,
 		userRepo,
@@ -96,10 +101,11 @@ func (app *application) mount() http.Handler {
 	tenantSvc := service.NewTenantService(tenantRepo, app.logger)
 	serviceSvc := service.NewServiceService(serviceRepo, txManager)
 	customerSvc := service.NewCustomerService(customerRepo)
-	eventSvc := service.NewEventService(eventRepo, serviceRepo, customerRepo, userRepo, txManager)
+	eventSvc := service.NewEventService(eventRepo, serviceRepo, customerRepo, userRepo, tenantRepo, txManager)
 
 	userHandler := handler.NewUserHandler(userSvc)
 	authHandler := handler.NewAuthHandler(authSvc, app.config.Auth.RefreshTokenTTL)
+	customerAuthHandler := handler.NewCustomerAuthHandler(customerAuthSvc, app.config.Auth.RefreshTokenTTL)
 	invitationHandler := handler.NewInvitationHandler(invitationSvc)
 	tenantHandler := handler.NewTenantHandler(tenantSvc)
 	serviceHandler := handler.NewServiceHandler(serviceSvc)
@@ -187,6 +193,27 @@ func (app *application) mount() http.Handler {
 			r.Get("/", eventHandler.List)
 			r.Post("/", eventHandler.Create)
 			r.Put("/{id}", eventHandler.Update)
+		})
+
+		r.Route("/p/{slug}", func(r chi.Router) {
+			r.Use(middleware.TenantResolver(tenantRepo))
+
+			r.Route("/auth", func(r chi.Router) {
+				r.Post("/register", customerAuthHandler.Register)
+				r.Post("/login", customerAuthHandler.Login)
+				r.Post("/refresh", customerAuthHandler.Refresh)
+				r.Post("/logout", customerAuthHandler.Logout)
+			})
+
+			r.Get("/services", serviceHandler.ListPublic)
+			r.Get("/timeslots", eventHandler.GetTimeslots)
+
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.CustomerJWTAuth(app.config.Auth.CustomerJWTSecret))
+				r.Get("/me", customerHandler.GetMe)
+				r.Get("/bookings", eventHandler.ListMyBookings)
+				r.Post("/bookings", eventHandler.CreateCustomerBooking)
+			})
 		})
 	})
 

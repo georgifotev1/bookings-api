@@ -19,6 +19,14 @@ func (m *MockTenantRepository) GetByID(ctx context.Context, id string) (*domain.
 	return args.Get(0).(*domain.Tenant), args.Error(1)
 }
 
+func (m *MockTenantRepository) GetBySlug(ctx context.Context, slug string) (*domain.Tenant, error) {
+	args := m.Called(ctx, slug)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.Tenant), args.Error(1)
+}
+
 func (m *MockTenantRepository) Create(ctx context.Context, tenant *domain.Tenant) error {
 	args := m.Called(ctx, tenant)
 	return args.Error(0)

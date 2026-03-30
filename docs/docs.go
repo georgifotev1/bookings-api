@@ -864,6 +864,340 @@ const docTemplate = `{
                 }
             }
         },
+        "/p/{slug}/auth/login": {
+            "post": {
+                "description": "Login a customer for the tenant",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "Login customer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Login request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.CustomerLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.Response-map_string_string"
+                        }
+                    }
+                }
+            }
+        },
+        "/p/{slug}/auth/logout": {
+            "post": {
+                "description": "Logout customer and revoke refresh token",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "Logout customer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/p/{slug}/auth/refresh": {
+            "post": {
+                "description": "Refresh customer access token",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "Refresh customer token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.Response-map_string_string"
+                        }
+                    }
+                }
+            }
+        },
+        "/p/{slug}/auth/register": {
+            "post": {
+                "description": "Register a new customer for the tenant",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "Register customer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Register request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.CustomerRegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.Response-map_string_string"
+                        }
+                    }
+                }
+            }
+        },
+        "/p/{slug}/bookings": {
+            "get": {
+                "security": [
+                    {
+                        "CustomerBearerAuth": []
+                    }
+                ],
+                "description": "List bookings for the authenticated customer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "List my bookings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Event"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "CustomerBearerAuth": []
+                    }
+                ],
+                "description": "Create a new booking for the authenticated customer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "Create booking",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Create request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.EventRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Event"
+                        }
+                    }
+                }
+            }
+        },
+        "/p/{slug}/me": {
+            "get": {
+                "security": [
+                    {
+                        "CustomerBearerAuth": []
+                    }
+                ],
+                "description": "Get the authenticated customer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "Get current customer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Customer"
+                        }
+                    }
+                }
+            }
+        },
+        "/p/{slug}/services": {
+            "get": {
+                "description": "Get all visible services for the tenant (public endpoint)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "List visible services",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.Service"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/p/{slug}/timeslots": {
+            "get": {
+                "description": "Get available timeslots for a service, user, and date",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "Get available timeslots",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tenant slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Service ID",
+                        "name": "service_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Date (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.TimeslotResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/services": {
             "get": {
                 "security": [
@@ -1504,6 +1838,44 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_georgifotev1_nuvelaone-api_internal_domain.CustomerLoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_georgifotev1_nuvelaone-api_internal_domain.CustomerRegisterRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "password",
+                "phone"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_georgifotev1_nuvelaone-api_internal_domain.CustomerRequest": {
             "type": "object",
             "required": [
@@ -1786,6 +2158,17 @@ const docTemplate = `{
                 "TierPro"
             ]
         },
+        "github_com_georgifotev1_nuvelaone-api_internal_domain.TimeslotResponse": {
+            "type": "object",
+            "properties": {
+                "timeslots": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "github_com_georgifotev1_nuvelaone-api_internal_domain.UpdateTenantRequest": {
             "type": "object",
             "properties": {
@@ -1958,6 +2341,14 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_georgifotev1_nuvelaone-api_pkg_jsonutil.Response-map_string_string": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/map_string_string"
+                }
+            }
+        },
         "internal_handler.TenantResponse": {
             "type": "object",
             "properties": {
@@ -1970,6 +2361,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/github_com_georgifotev1_nuvelaone-api_internal_domain.WorkingHours"
                     }
                 }
+            }
+        },
+        "map_string_string": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "string"
             }
         }
     },

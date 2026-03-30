@@ -21,12 +21,14 @@ type LoginRequest struct {
 }
 
 type RefreshToken struct {
-	ID        string
-	UserID    string
-	TokenHash string
-	ExpiresAt time.Time
-	CreatedAt time.Time
-	RevokedAt *time.Time
+	ID         string
+	UserID     string
+	CustomerID string
+	TenantID   string
+	TokenHash  string
+	ExpiresAt  time.Time
+	CreatedAt  time.Time
+	RevokedAt  *time.Time
 }
 
 type CreateInvitationRequest struct {

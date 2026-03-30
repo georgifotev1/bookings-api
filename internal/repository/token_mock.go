@@ -34,6 +34,11 @@ func (m *MockTokenRepository) RevokeAllForUser(ctx context.Context, userID strin
 	return args.Error(0)
 }
 
+func (m *MockTokenRepository) RevokeAllForCustomer(ctx context.Context, customerID string) error {
+	args := m.Called(ctx, customerID)
+	return args.Error(0)
+}
+
 func (m *MockTokenRepository) DeleteExpired(ctx context.Context) error {
 	args := m.Called(ctx)
 	return args.Error(0)

@@ -13,6 +13,7 @@ import (
 
 type ServiceService interface {
 	ListByTenant(ctx context.Context, tenantID string) ([]domain.Service, error)
+	ListVisible(ctx context.Context, tenantID string) ([]domain.Service, error)
 	GetByID(ctx context.Context, tenantID, id string) (*domain.Service, error)
 	Create(ctx context.Context, tenantID string, req domain.ServiceRequest) (*domain.Service, error)
 	Update(ctx context.Context, tenantID, serviceID string, req domain.ServiceRequest) (*domain.Service, error)
@@ -32,6 +33,14 @@ func (s *serviceService) ListByTenant(ctx context.Context, tenantID string) ([]d
 	services, err := s.repo.ListByTenant(ctx, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("serviceService.ListByTenant: %w", err)
+	}
+	return services, nil
+}
+
+func (s *serviceService) ListVisible(ctx context.Context, tenantID string) ([]domain.Service, error) {
+	services, err := s.repo.ListVisible(ctx, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("serviceService.ListVisible: %w", err)
 	}
 	return services, nil
 }

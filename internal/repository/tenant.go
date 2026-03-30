@@ -13,6 +13,7 @@ import (
 
 type TenantRepository interface {
 	GetByID(ctx context.Context, id string) (*domain.Tenant, error)
+	GetBySlug(ctx context.Context, slug string) (*domain.Tenant, error)
 	Create(ctx context.Context, tenant *domain.Tenant) error
 	Update(ctx context.Context, tenant *domain.Tenant) error
 	GetWorkingHours(ctx context.Context, tenantID string) ([]domain.WorkingHours, error)
@@ -74,6 +75,35 @@ func (r *tenantRepository) GetByID(ctx context.Context, id string) (*domain.Tena
 
 	if err := r.cache.Set(ctx, id, &t); err != nil {
 		fmt.Printf("cache set failed for tenant:%s: %v\n", id, err)
+	}
+
+	return &t, nil
+}
+
+func (r *tenantRepository) GetBySlug(ctx context.Context, slug string) (*domain.Tenant, error) {
+	query := `
+		SELECT id, name, slug, phone, email, tier, timezone, address_id, created_at, updated_at
+		FROM tenants WHERE slug = $1`
+
+	var t domain.Tenant
+	row := r.dbFromContext(ctx).QueryRow(ctx, query, slug)
+	err := row.Scan(
+		&t.ID,
+		&t.Name,
+		&t.Slug,
+		&t.Phone,
+		&t.Email,
+		&t.Tier,
+		&t.Timezone,
+		&t.AddressID,
+		&t.CreatedAt,
+		&t.UpdatedAt,
+	)
+	if err != nil {
+		if isNotFound(err) {
+			return nil, fmt.Errorf("tenantRepository.GetBySlug: %w", apperr.NotFound("tenant not found", err))
+		}
+		return nil, fmt.Errorf("tenantRepository.GetBySlug: %w", apperr.Internal(err))
 	}
 
 	return &t, nil

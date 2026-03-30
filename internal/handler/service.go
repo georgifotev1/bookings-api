@@ -42,6 +42,32 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 	jsonutil.Write(w, http.StatusOK, jsonutil.NewResponse(services))
 }
 
+// ListPublic godoc
+//
+//	@Summary		List visible services
+//	@Description	Get all visible services for the tenant (public endpoint)
+//	@Tags			public
+//	@Produce		json
+//	@Param			slug	path		string	true	"Tenant slug"
+//	@Success		200	{array}		domain.Service
+//	@Router			/p/{slug}/services [get]
+func (h *ServiceHandler) ListPublic(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenant := domain.TenantFromContext(ctx)
+	if tenant == nil {
+		jsonutil.WriteError(w, http.StatusBadRequest, "tenant not found")
+		return
+	}
+
+	services, err := h.svc.ListVisible(ctx, tenant.ID)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	jsonutil.Write(w, http.StatusOK, jsonutil.NewResponse(services))
+}
+
 // GetByID godoc
 //
 //	@Summary		Get service by ID

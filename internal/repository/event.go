@@ -17,6 +17,8 @@ type EventRepository interface {
 	Update(ctx context.Context, event *domain.Event) error
 	CheckUserAvailability(ctx context.Context, tenantID, userID string, startTime, endTime time.Time, excludeEventID string) (bool, error)
 	List(ctx context.Context, tenantID string, startTime, endTime time.Time) ([]domain.Event, error)
+	ListByCustomer(ctx context.Context, tenantID, customerID string) ([]domain.Event, error)
+	ListByUserAndDateRange(ctx context.Context, tenantID, userID string, startTime, endTime time.Time) ([]domain.Event, error)
 }
 
 type eventRepository struct {
@@ -176,6 +178,96 @@ func (r *eventRepository) List(ctx context.Context, tenantID string, startTime, 
 
 	if rows.Err() != nil {
 		return nil, fmt.Errorf("eventRepository.List rows: %w", apperr.Internal(err))
+	}
+
+	if events == nil {
+		return []domain.Event{}, nil
+	}
+
+	return events, nil
+}
+
+func (r *eventRepository) ListByCustomer(ctx context.Context, tenantID, customerID string) ([]domain.Event, error) {
+	query := `
+		SELECT id, customer_id, service_id, user_id, tenant_id, start_time, end_time, status, notes, created_at, updated_at
+		FROM events
+		WHERE tenant_id = $1 AND customer_id = $2
+		ORDER BY start_time DESC`
+
+	rows, err := r.dbFromContext(ctx).Query(ctx, query, tenantID, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("eventRepository.ListByCustomer: %w", apperr.Internal(err))
+	}
+	defer rows.Close()
+
+	var events []domain.Event
+	for rows.Next() {
+		var e domain.Event
+		if err := rows.Scan(
+			&e.ID,
+			&e.CustomerID,
+			&e.ServiceID,
+			&e.UserID,
+			&e.TenantID,
+			&e.StartTime,
+			&e.EndTime,
+			&e.Status,
+			&e.Notes,
+			&e.CreatedAt,
+			&e.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("eventRepository.ListByCustomer scan: %w", apperr.Internal(err))
+		}
+		events = append(events, e)
+	}
+
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("eventRepository.ListByCustomer rows: %w", apperr.Internal(err))
+	}
+
+	if events == nil {
+		return []domain.Event{}, nil
+	}
+
+	return events, nil
+}
+
+func (r *eventRepository) ListByUserAndDateRange(ctx context.Context, tenantID, userID string, startTime, endTime time.Time) ([]domain.Event, error) {
+	query := `
+		SELECT id, customer_id, service_id, user_id, tenant_id, start_time, end_time, status, notes, created_at, updated_at
+		FROM events
+		WHERE tenant_id = $1 AND user_id = $2 AND status != 'cancelled' AND start_time >= $3 AND start_time < $4
+		ORDER BY start_time ASC`
+
+	rows, err := r.dbFromContext(ctx).Query(ctx, query, tenantID, userID, startTime, endTime)
+	if err != nil {
+		return nil, fmt.Errorf("eventRepository.ListByUserAndDateRange: %w", apperr.Internal(err))
+	}
+	defer rows.Close()
+
+	var events []domain.Event
+	for rows.Next() {
+		var e domain.Event
+		if err := rows.Scan(
+			&e.ID,
+			&e.CustomerID,
+			&e.ServiceID,
+			&e.UserID,
+			&e.TenantID,
+			&e.StartTime,
+			&e.EndTime,
+			&e.Status,
+			&e.Notes,
+			&e.CreatedAt,
+			&e.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("eventRepository.ListByUserAndDateRange scan: %w", apperr.Internal(err))
+		}
+		events = append(events, e)
+	}
+
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("eventRepository.ListByUserAndDateRange rows: %w", apperr.Internal(err))
 	}
 
 	if events == nil {

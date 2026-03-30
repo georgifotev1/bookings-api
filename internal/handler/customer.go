@@ -182,3 +182,30 @@ func (h *CustomerHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// GetMe godoc
+//
+//	@Summary		Get current customer
+//	@Description	Get the authenticated customer
+//	@Tags			public
+//	@Produce		json
+//	@Security		CustomerBearerAuth
+//	@Param			slug	path		string	true	"Tenant slug"
+//	@Success		200	{object}	domain.Customer
+//	@Router			/p/{slug}/me [get]
+func (h *CustomerHandler) GetMe(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	claims := auth.CustomerClaimsFromContext(ctx)
+	if claims == nil {
+		jsonutil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	customer, err := h.svc.GetByID(ctx, claims.TenantID, claims.CustomerID)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	jsonutil.Write(w, http.StatusOK, jsonutil.NewResponse(customer))
+}
